@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:money_manager/detail.dart';
+import 'package:money_manager/home.dart';
+import 'package:money_manager/stats.dart';
 
 void main() {
   runApp(const MoneyManager());
@@ -12,6 +15,9 @@ class MoneyManager extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: "Money Manager",
+      theme: ThemeData(
+        splashColor: Colors.transparent,
+      ),
       home: const MainPage(),
     );
   }
@@ -25,62 +31,58 @@ class MainPage extends StatefulWidget {
 }
 
 class _MainPageState extends State<MainPage> {
+  int _selectedIndex = 0;
+
+  static const List<Widget> _widgetOptions = <Widget>[
+    Home(),
+    Detail(),
+    Stats(),
+  ];
+
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Color(0xFFF5F5F7),
       body: SafeArea(
-        child: Column(
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    IconButton(
-                      onPressed: () {},
-                      icon: Icon(
-                        Icons.chevron_left_rounded,
-                        size: 48,
-                        color: Colors.black,
-                      ),
-                    ),
-                    Text(
-                      'Nov. 2025',
-                      style: TextStyle(
-                        color: Colors.black,
-                        fontSize: 24,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: () {},
-                      icon: Icon(
-                        Icons.chevron_right_rounded,
-                        size: 48,
-                        color: Colors.black,
-                      ),
-                    ),
-                  ],
-                ),
-                Padding(
-                  padding: const EdgeInsets.only(right: 16),
-                  child: IconButton.filled(
-                    onPressed: () {},
-                    icon: Icon(
-                      Icons.bar_chart_rounded,
-                      size: 36,
-                      color: Colors.black,
-                    ),
-                    style: IconButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: Colors.black,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
+        child: _widgetOptions.elementAt(_selectedIndex),
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        items: const <BottomNavigationBarItem>[
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.format_align_left_rounded),
+            label: 'Detail',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.pie_chart_sharp),
+            label: 'Stats',
+          ),
+        ],
+        currentIndex: _selectedIndex,
+        selectedItemColor: Colors.black,
+        backgroundColor: Colors.white,
+        elevation: 0,
+        enableFeedback: true,
+        onTap: _onItemTapped,
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {},
+        splashColor: Colors.grey[800],
+        elevation: 1,
+        backgroundColor: Colors.black,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(100),
+        ),
+        child: Icon(
+          Icons.add,
+          size: 28,
+          color: Colors.white,
         ),
       ),
     );
