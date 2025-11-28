@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:money_manager/Home/post.dart';
 import 'package:money_manager/detail.dart';
-import 'package:money_manager/home.dart';
+import 'package:money_manager/Home/home.dart';
 import 'package:money_manager/stats.dart';
 
 void main() {
@@ -48,6 +49,7 @@ class _MainPageState extends State<MainPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       backgroundColor: Color(0xFFF5F5F7),
       body: SafeArea(
         child: _widgetOptions.elementAt(_selectedIndex),
@@ -72,7 +74,14 @@ class _MainPageState extends State<MainPage> {
         onTap: _onItemTapped,
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {},
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute<void>(
+              builder: (context) => const Post(),
+            ),
+          );
+        },
         splashColor: Colors.grey[800],
         elevation: 1,
         backgroundColor: Colors.black,
