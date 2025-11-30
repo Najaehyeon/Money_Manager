@@ -14,7 +14,6 @@ class Home extends StatefulWidget {
 
 class _HomeState extends State<Home> {
   double _targetMoney = 0;
-  double newTargetMoney = 0;
 
   @override
   void initState() {
@@ -22,11 +21,10 @@ class _HomeState extends State<Home> {
     _loadTargetMoney();
   }
 
-  Future<void> _loadTargetMoney() async {
+  Future<double> _loadTargetMoney() async {
     final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _targetMoney = prefs.getDouble('target_money') ?? 0;
-    });
+    _targetMoney = prefs.getDouble('target_money') ?? 0;
+    return _targetMoney;
   }
 
   Future<void> _storeTargetMoney(double newTarget) async {
@@ -42,23 +40,31 @@ class _HomeState extends State<Home> {
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-
-    return Column(
-      children: [
-        Header(),
-        TodaySpentMoney(),
-        SizedBox(height: 24),
-        Expanded(
-          child: Cylinder(screenWidth: screenWidth),
-        ),
-        SizedBox(height: 24),
-        TargetMonthlyMax(
-          targetMoney: _targetMoney,
-          onSetTargetMoney: _storeTargetMoney,
-        ),
-        SizedBox(height: 36),
-      ],
+    return FutureBuilder(
+      future: _loadTargetMoney(),
+      builder: (context, asyncSnapshot) {
+        if (asyncSnapshot.connectionState != ConnectionState.done ||
+            asyncSnapshot.hasError) {
+          return const Center();
+        }
+        final screenWidth = MediaQuery.of(context).size.width;
+        return Column(
+          children: [
+            Header(),
+            TodaySpentMoney(),
+            SizedBox(height: 24),
+            Expanded(
+              child: Cylinder(screenWidth: screenWidth),
+            ),
+            SizedBox(height: 24),
+            TargetMonthlyMax(
+              targetMoney: _targetMoney,
+              onSetTargetMoney: _storeTargetMoney,
+            ),
+            SizedBox(height: 36),
+          ],
+        );
+      },
     );
   }
 }
@@ -373,7 +379,7 @@ class _SettingTargetModalState extends State<SettingTargetModal> {
   Widget build(BuildContext context) {
     return Dialog(
       shadowColor: Colors.black,
-      elevation: 2,
+      elevation: 4,
       backgroundColor: Colors.white,
       alignment: Alignment(0, -0.1),
       shape: RoundedRectangleBorder(
@@ -427,7 +433,9 @@ class _SettingTargetModalState extends State<SettingTargetModal> {
                       minimumSize: Size.fromHeight(48),
                       backgroundColor: Color(0xFFF1F1F1),
                       foregroundColor: Colors.white,
+                      overlayColor: Colors.black,
                       elevation: 0,
+                      shadowColor: Colors.transparent,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(
                           12,
@@ -450,7 +458,9 @@ class _SettingTargetModalState extends State<SettingTargetModal> {
                       minimumSize: Size.fromHeight(48),
                       backgroundColor: Colors.black,
                       foregroundColor: Colors.white,
+                      overlayColor: Colors.white,
                       elevation: 0,
+                      shadowColor: Colors.transparent,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(
                           12,

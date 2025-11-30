@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:intl/date_symbol_data_file.dart';
 import 'package:money_manager/Home/post.dart';
 import 'package:money_manager/detail.dart';
 import 'package:money_manager/Home/home.dart';
-import 'package:money_manager/stats.dart';
 
 void main() {
   runApp(const MoneyManager());
@@ -17,6 +17,7 @@ class MoneyManager extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: "Money Manager",
       theme: ThemeData(
+        scaffoldBackgroundColor: Colors.white,
         splashColor: Colors.transparent,
       ),
       home: const MainPage(),
@@ -37,7 +38,6 @@ class _MainPageState extends State<MainPage> {
   static const List<Widget> _widgetOptions = <Widget>[
     Home(),
     Detail(),
-    Stats(),
   ];
 
   void _onItemTapped(int index) {
@@ -60,10 +60,6 @@ class _MainPageState extends State<MainPage> {
           BottomNavigationBarItem(
             icon: Icon(Icons.format_align_left_rounded),
             label: 'Detail',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.pie_chart_sharp),
-            label: 'Stats',
           ),
         ],
         currentIndex: _selectedIndex,
