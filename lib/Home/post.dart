@@ -12,7 +12,7 @@ class Post extends StatefulWidget {
 class _PostState extends State<Post> {
   DateTime _selectedDate = DateTime.now();
 
-  String formatedDate = DateFormat('MMMM dd, yyyy').format(DateTime.now());
+  String formatedDate = DateFormat('MMMM d, yyyy').format(DateTime.now());
 
   void _showDatePicker(BuildContext context) {
     showCupertinoModalPopup(
@@ -29,7 +29,7 @@ class _PostState extends State<Post> {
             onDateTimeChanged: (DateTime newDate) {
               setState(() {
                 _selectedDate = newDate;
-                formatedDate = DateFormat('MMMM dd yy').format(_selectedDate);
+                formatedDate = DateFormat('MMMM d, yyyy').format(_selectedDate);
               });
             },
           ),
@@ -193,6 +193,7 @@ class _PostState extends State<Post> {
               onPressed: () {},
               style: ElevatedButton.styleFrom(
                 elevation: 0,
+                shadowColor: Colors.transparent,
                 backgroundColor: Colors.black,
                 fixedSize: Size(MediaQuery.of(context).size.width, 48),
                 shape: RoundedRectangleBorder(

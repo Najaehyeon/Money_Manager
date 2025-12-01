@@ -15,6 +15,11 @@ class Home extends StatefulWidget {
 class _HomeState extends State<Home> {
   double _targetMoney = 0;
 
+  final double _currentSpentMoney = 1200.5;
+  final double _monthlyLimitMoney = 3000.0;
+  final double _limitMoneyHeightRatio = 0.68;
+  final double _spentMoneyHeightRatio = 0.40;
+
   @override
   void initState() {
     super.initState();
@@ -54,7 +59,13 @@ class _HomeState extends State<Home> {
             TodaySpentMoney(),
             SizedBox(height: 24),
             Expanded(
-              child: Cylinder(screenWidth: screenWidth),
+              child: Cylinder(
+                screenWidth: screenWidth,
+                currentSpentMoney: _currentSpentMoney,
+                limitMoney: _monthlyLimitMoney,
+                limitMoneyHeightRatio: _limitMoneyHeightRatio,
+                spentMoneyHeightRatio: _spentMoneyHeightRatio,
+              ),
             ),
             SizedBox(height: 24),
             TargetMonthlyMax(
@@ -176,20 +187,34 @@ class Cylinder extends StatelessWidget {
   const Cylinder({
     super.key,
     required this.screenWidth,
+    required this.currentSpentMoney,
+    required this.limitMoney,
+    required this.limitMoneyHeightRatio,
+    required this.spentMoneyHeightRatio,
   });
 
   final double screenWidth;
+  final double currentSpentMoney;
+  final double limitMoney;
+  final double limitMoneyHeightRatio;
+  final double spentMoneyHeightRatio;
 
   @override
   Widget build(BuildContext context) {
+    const Color blueColor = Color(0xFF0000BB);
+
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
         final double maxHeight = constraints.maxHeight;
         // 높이 비율은 임의로 설정된 값
-        final double limitMoneyHeight = maxHeight * 0.68;
-        final double spentMoneyHeight = maxHeight * 0.1;
+        final double limitMoneyHeight = maxHeight * limitMoneyHeightRatio;
+        final double spentMoneyHeight = maxHeight * spentMoneyHeightRatio;
         final double cylinderWidth = screenWidth * 0.38;
-        const Color primaryColor = Color(0xFF0000BB);
+
+        final String formattedSpentMoney =
+            "\$${NumberFormat('#,###.0', 'en-US').format(currentSpentMoney)}";
+        final String formattedLimitMoney =
+            "Dec 25\n\$${NumberFormat('#,###', 'en-US').format(limitMoney)}";
 
         return ClipRRect(
           borderRadius: const BorderRadius.only(
@@ -213,7 +238,7 @@ class Cylinder extends StatelessWidget {
                 width: cylinderWidth,
                 height: spentMoneyHeight,
                 decoration: const BoxDecoration(
-                  color: primaryColor,
+                  color: blueColor,
                 ),
               ),
               // 목표 한계선
@@ -228,6 +253,40 @@ class Cylinder extends StatelessWidget {
                         width: 1,
                       ),
                     ),
+                  ),
+                ),
+              ),
+              Positioned(
+                bottom: spentMoneyHeight, // 채워진 부분의 끝 (상단)에 위치
+                right: cylinderWidth * 0.02, // 실린더 오른쪽으로 조금 이동
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 8.0),
+                  child: Text(
+                    formattedSpentMoney,
+                    style: TextStyle(
+                      color: blueColor,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+
+              // 2. 목표 한계 금액 텍스트 (실린더 왼쪽)
+              Positioned(
+                bottom: limitMoneyHeight, // 목표 한계선 상단에 위치 (-12는 텍스트 높이 보정)
+                left: cylinderWidth * 0.02, // 실린더 왼쪽으로 조금 이동
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 8.0),
+                  child: Text(
+                    formattedLimitMoney,
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                    textAlign: TextAlign.center,
                   ),
                 ),
               ),
