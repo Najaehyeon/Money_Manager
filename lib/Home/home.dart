@@ -15,10 +15,11 @@ class Home extends StatefulWidget {
 class _HomeState extends State<Home> {
   double _targetMoney = 0;
 
-  final double _currentSpentMoney = 1200.5;
-  final double _monthlyLimitMoney = 3000.0;
-  final double _limitMoneyHeightRatio = 0.68;
-  final double _spentMoneyHeightRatio = 0.40;
+  final double _currentSpentMoney = 0;
+  double _monthDailyLimitMoney = 0;
+  double _limitMoneyHeightRatio = 0;
+  final double _spentMoneyHeightRatio = 0;
+  final double todaySpentMoney = 0;
 
   @override
   void initState() {
@@ -26,10 +27,12 @@ class _HomeState extends State<Home> {
     _loadTargetMoney();
   }
 
-  Future<double> _loadTargetMoney() async {
+  Future<void> _loadTargetMoney() async {
     final prefs = await SharedPreferences.getInstance();
     _targetMoney = prefs.getDouble('target_money') ?? 0;
-    return _targetMoney;
+    DateTime now = DateTime.now();
+    _limitMoneyHeightRatio = now.day / DateTime(now.year, now.month + 1, 0).day;
+    _monthDailyLimitMoney = _targetMoney * _limitMoneyHeightRatio;
   }
 
   Future<void> _storeTargetMoney(double newTarget) async {
@@ -56,15 +59,16 @@ class _HomeState extends State<Home> {
         return Column(
           children: [
             Header(),
-            TodaySpentMoney(),
+            TodaySpentMoney(todaySpentMoney: todaySpentMoney),
             SizedBox(height: 24),
             Expanded(
               child: Cylinder(
                 screenWidth: screenWidth,
                 currentSpentMoney: _currentSpentMoney,
-                limitMoney: _monthlyLimitMoney,
+                limitMoney: _monthDailyLimitMoney,
                 limitMoneyHeightRatio: _limitMoneyHeightRatio,
                 spentMoneyHeightRatio: _spentMoneyHeightRatio,
+                targetMoney: _targetMoney,
               ),
             ),
             SizedBox(height: 24),
@@ -148,7 +152,10 @@ class Header extends StatelessWidget {
 class TodaySpentMoney extends StatelessWidget {
   const TodaySpentMoney({
     super.key,
+    required this.todaySpentMoney,
   });
+
+  final double todaySpentMoney;
 
   static const Color primaryColor = Color(0xFF0000BB);
 
@@ -164,7 +171,7 @@ class TodaySpentMoney extends StatelessWidget {
           ),
         ),
         Text(
-          "\$ 33.4",
+          "\$ $todaySpentMoney",
           style: TextStyle(
             fontSize: 32,
             fontWeight: FontWeight.w600,
@@ -191,6 +198,7 @@ class Cylinder extends StatelessWidget {
     required this.limitMoney,
     required this.limitMoneyHeightRatio,
     required this.spentMoneyHeightRatio,
+    required this.targetMoney,
   });
 
   final double screenWidth;
@@ -198,6 +206,7 @@ class Cylinder extends StatelessWidget {
   final double limitMoney;
   final double limitMoneyHeightRatio;
   final double spentMoneyHeightRatio;
+  final double targetMoney;
 
   @override
   Widget build(BuildContext context) {
@@ -207,91 +216,106 @@ class Cylinder extends StatelessWidget {
       builder: (BuildContext context, BoxConstraints constraints) {
         final double maxHeight = constraints.maxHeight;
         // 높이 비율은 임의로 설정된 값
-        final double limitMoneyHeight = maxHeight * limitMoneyHeightRatio;
-        final double spentMoneyHeight = maxHeight * spentMoneyHeightRatio;
+        final double limitMoneyHeight = limitMoneyHeightRatio <= 0.888
+            ? maxHeight * limitMoneyHeightRatio
+            : maxHeight * 0.888;
+        final double spentMoneyHeight = spentMoneyHeightRatio <= 0.888
+            ? maxHeight * spentMoneyHeightRatio
+            : maxHeight * 0.888;
         final double cylinderWidth = screenWidth * 0.38;
 
         final String formattedSpentMoney =
             "\$${NumberFormat('#,###.0', 'en-US').format(currentSpentMoney)}";
         final String formattedLimitMoney =
-            "Dec 25\n\$${NumberFormat('#,###', 'en-US').format(limitMoney)}";
+            "${DateFormat("MMM d").format(DateTime.now())}\n\$${NumberFormat('#,###', 'en-US').format(limitMoney)}";
 
-        return ClipRRect(
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(8),
-            topRight: Radius.circular(8),
-            bottomLeft: Radius.circular(50),
-            bottomRight: Radius.circular(50),
-          ),
-          child: Stack(
-            alignment: Alignment.bottomCenter,
-            children: [
-              // 기본 배경 (원통의 빈 부분)
-              Container(
-                width: cylinderWidth,
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                ),
-              ),
-              // 사용 금액 표시 (채워진 부분)
-              Container(
-                width: cylinderWidth,
-                height: spentMoneyHeight,
-                decoration: const BoxDecoration(
-                  color: blueColor,
-                ),
-              ),
-              // 목표 한계선
-              SizedBox(
-                width: cylinderWidth,
-                height: limitMoneyHeight,
-                child: const DecoratedBox(
-                  decoration: BoxDecoration(
-                    border: Border(
-                      top: BorderSide(
-                        color: Colors.black,
-                        width: 1,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              Positioned(
-                bottom: spentMoneyHeight, // 채워진 부분의 끝 (상단)에 위치
-                right: cylinderWidth * 0.02, // 실린더 오른쪽으로 조금 이동
-                child: Padding(
-                  padding: const EdgeInsets.only(left: 8.0),
-                  child: Text(
-                    formattedSpentMoney,
-                    style: TextStyle(
-                      color: blueColor,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              ),
-
-              // 2. 목표 한계 금액 텍스트 (실린더 왼쪽)
-              Positioned(
-                bottom: limitMoneyHeight, // 목표 한계선 상단에 위치 (-12는 텍스트 높이 보정)
-                left: cylinderWidth * 0.02, // 실린더 왼쪽으로 조금 이동
-                child: Padding(
-                  padding: const EdgeInsets.only(right: 8.0),
-                  child: Text(
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.end,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
                     formattedLimitMoney,
                     style: TextStyle(
                       color: Colors.black,
                       fontWeight: FontWeight.w600,
                       fontSize: 14,
                     ),
-                    textAlign: TextAlign.center,
+                    textAlign: TextAlign.end,
                   ),
-                ),
+                  SizedBox(
+                    height: limitMoneyHeight,
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+            SizedBox(width: 8),
+            ClipRRect(
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(8),
+                topRight: Radius.circular(8),
+                bottomLeft: Radius.circular(50),
+                bottomRight: Radius.circular(50),
+              ),
+              child: Stack(
+                alignment: Alignment.bottomCenter,
+                children: [
+                  // 기본 배경 (원통의 빈 부분)
+                  Container(
+                    width: cylinderWidth,
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                    ),
+                  ),
+                  // 사용 금액 표시 (채워진 부분)
+                  Container(
+                    width: cylinderWidth,
+                    height: spentMoneyHeight,
+                    decoration: const BoxDecoration(
+                      color: blueColor,
+                    ),
+                  ),
+                  // 목표 한계선
+                  SizedBox(
+                    width: cylinderWidth,
+                    height: limitMoneyHeight,
+                    child: const DecoratedBox(
+                      decoration: BoxDecoration(
+                        border: Border(
+                          top: BorderSide(
+                            color: Colors.black,
+                            width: 1,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.end,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    formattedSpentMoney,
+                    style: TextStyle(
+                      color: blueColor,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                    textAlign: TextAlign.start,
+                  ),
+                  SizedBox(height: spentMoneyHeight),
+                ],
+              ),
+            ),
+          ],
         );
       },
     );
