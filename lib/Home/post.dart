@@ -19,7 +19,7 @@ class _PostState extends State<Post> {
 
   Future<void> _loadCategoryData() async {
     final prefs = await SharedPreferences.getInstance();
-    categories = prefs.getStringList('categories') ?? ["식비", "+"];
+    categories = prefs.getStringList('categories') ?? [];
   }
 
   void _showDatePicker(BuildContext context) {
@@ -73,7 +73,7 @@ class _PostState extends State<Post> {
                 padding: const EdgeInsets.all(16),
                 child: GridView.builder(
                   shrinkWrap: true,
-                  itemCount: categories.length,
+                  itemCount: categories.length + 1,
                   gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 3,
                     childAspectRatio: 2 / 1,
@@ -82,7 +82,128 @@ class _PostState extends State<Post> {
                   ),
                   itemBuilder: (BuildContext context, int index) {
                     return ElevatedButton(
-                      onPressed: () {},
+                      onPressed: () {
+                        if (index == categories.length) {
+                          showDialog(
+                            context: context,
+                            builder: (BuildContext context) {
+                              return Dialog(
+                                shadowColor: Colors.black,
+                                elevation: 4,
+                                backgroundColor: Colors.white,
+                                alignment: Alignment(0, -0.1),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadiusGeometry.circular(
+                                    24,
+                                  ),
+                                ),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(20),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        "ADD CATEGROY",
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 16,
+                                        ),
+                                      ),
+                                      SizedBox(height: 16),
+                                      TextField(
+                                        keyboardType: TextInputType.number,
+                                        cursorColor: Colors.black,
+                                        decoration: InputDecoration(
+                                          filled: true,
+                                          fillColor: Color(0xFFF1F1F1),
+                                          hintText: "Enter The Category",
+                                          border: OutlineInputBorder(
+                                            borderSide: BorderSide.none,
+                                            borderRadius: BorderRadius.circular(
+                                              16,
+                                            ),
+                                          ),
+                                          contentPadding: EdgeInsets.symmetric(
+                                            horizontal:
+                                                16, // 좌우 여백을 늘려 힌트 텍스트가 잘리지 않게 조정
+                                            vertical: 14, // 높이 조정
+                                          ),
+                                        ),
+                                        textAlign:
+                                            TextAlign.center, // 텍스트 중앙 정렬
+                                      ),
+                                      SizedBox(height: 16),
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceAround,
+                                        children: [
+                                          Expanded(
+                                            child: ElevatedButton(
+                                              onPressed: () {},
+                                              style: ElevatedButton.styleFrom(
+                                                minimumSize: Size.fromHeight(
+                                                  48,
+                                                ),
+                                                backgroundColor: Color(
+                                                  0xFFF1F1F1,
+                                                ),
+                                                foregroundColor: Colors.white,
+                                                overlayColor: Colors.black,
+                                                elevation: 0,
+                                                shadowColor: Colors.transparent,
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                        12,
+                                                      ),
+                                                ),
+                                              ),
+                                              child: Text(
+                                                'Cancel',
+                                                style: TextStyle(
+                                                  color: Colors.black,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                          SizedBox(width: 8),
+                                          Expanded(
+                                            child: ElevatedButton(
+                                              onPressed: () {},
+                                              style: ElevatedButton.styleFrom(
+                                                minimumSize: Size.fromHeight(
+                                                  48,
+                                                ),
+                                                backgroundColor: Colors.black,
+                                                foregroundColor: Colors.white,
+                                                overlayColor: Colors.white,
+                                                elevation: 0,
+                                                shadowColor: Colors.transparent,
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                        12,
+                                                      ),
+                                                ),
+                                              ),
+                                              child: Text(
+                                                'OK',
+                                                style: TextStyle(
+                                                  color: Colors.white,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          );
+                        }
+                      },
                       style: ElevatedButton.styleFrom(
                         elevation: 0,
                         shadowColor: Colors.transparent,
@@ -92,13 +213,18 @@ class _PostState extends State<Post> {
                           borderRadius: BorderRadiusGeometry.circular(12),
                         ),
                       ),
-                      child: Text(
-                        categories[index],
-                        style: TextStyle(
-                          color: Colors.black,
-                          fontWeight: FontWeight.normal,
-                        ),
-                      ),
+                      child: index == categories.length
+                          ? Icon(
+                              Icons.add,
+                              color: Colors.black,
+                            )
+                          : Text(
+                              categories[index],
+                              style: TextStyle(
+                                color: Colors.black,
+                                fontWeight: FontWeight.normal,
+                              ),
+                            ),
                     );
                   },
                 ),
