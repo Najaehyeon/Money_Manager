@@ -4,6 +4,8 @@ import 'package:money_manager/Home/post.dart';
 import 'package:money_manager/detail.dart';
 import 'package:money_manager/Home/home.dart';
 
+final RouteObserver<PageRoute> routeObserver = RouteObserver<PageRoute>();
+
 void main() {
   runApp(const MoneyManager());
 }
@@ -15,6 +17,7 @@ class MoneyManager extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
+      navigatorObservers: [routeObserver],
       title: "Money Manager",
       theme: ThemeData(
         scaffoldBackgroundColor: Colors.white,
