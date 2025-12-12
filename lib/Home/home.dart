@@ -725,7 +725,7 @@ class _SettingTargetModalState extends State<SettingTargetModal> {
                       minimumSize: const Size.fromHeight(48),
                       backgroundColor: const Color(0xFFF1F1F1),
                       foregroundColor: Colors.black,
-                      overlayColor: Colors.black.withOpacity(0.1),
+                      overlayColor: Colors.white,
                       elevation: 0,
                       shadowColor: Colors.transparent,
                       shape: RoundedRectangleBorder(
@@ -750,7 +750,7 @@ class _SettingTargetModalState extends State<SettingTargetModal> {
                       minimumSize: const Size.fromHeight(48),
                       backgroundColor: Colors.black,
                       foregroundColor: Colors.white,
-                      overlayColor: Colors.white.withOpacity(0.1),
+                      overlayColor: Colors.black,
                       elevation: 0,
                       shadowColor: Colors.transparent,
                       shape: RoundedRectangleBorder(

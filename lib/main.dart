@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:intl/date_symbol_data_file.dart';
 import 'package:money_manager/Home/post.dart';
 import 'package:money_manager/detail.dart';
 import 'package:money_manager/Home/home.dart';
