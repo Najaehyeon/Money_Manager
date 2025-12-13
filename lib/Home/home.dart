@@ -20,25 +20,7 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> with RouteAware {
-  String _message = '초기 상태';
-
-  // 1. RouteAware를 사용하기 위해 routeObserver에 현재 Route를 등록합니다.
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    routeObserver.subscribe(this, ModalRoute.of(context) as PageRoute);
-  }
-
-  // 2. 현재 화면이 스택으로 돌아왔을 때 호출되는 메서드
-  @override
-  void didPopNext() {
-    // SecondScreen에서 pop()을 실행하여 돌아왔을 때 이곳이 호출됩니다.
-    setState(() {
-      _message = '${DateTime.now().second}초';
-    });
-    super.didPopNext();
-  }
-
+  String state = '초기 상태';
   // 상태 변수 (이전과 동일)
   double _targetMoney = 0;
   DateTime _selectedDate = DateTime(2025, 11);
@@ -54,6 +36,26 @@ class _HomeState extends State<Home> with RouteAware {
   void initState() {
     super.initState();
     _loadAllData();
+  }
+
+  // 1. RouteAware를 사용하기 위해 routeObserver에 현재 Route를 등록합니다.
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    routeObserver.subscribe(this, ModalRoute.of(context) as PageRoute);
+  }
+
+  // 2. 현재 화면이 스택으로 돌아왔을 때 호출되는 메서드
+  @override
+  void didPopNext() {
+    _loadAllData();
+  }
+
+  // 6. 위젯이 제거될 때 구독을 해제합니다.
+  @override
+  void dispose() {
+    routeObserver.unsubscribe(this);
+    super.dispose();
   }
 
   /// SharedPreferences에서 목표 금액을 로드합니다.
@@ -200,12 +202,6 @@ class _HomeState extends State<Home> with RouteAware {
       _selectedDate = DateTime(_selectedDate.year, _selectedDate.month + 1);
     });
     await _loadMonthlySpentData();
-  }
-
-  @override
-  void dispose() {
-    routeObserver.unsubscribe(this);
-    super.dispose();
   }
 
   @override
