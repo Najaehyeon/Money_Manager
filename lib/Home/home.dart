@@ -192,16 +192,32 @@ class _HomeState extends State<Home> with RouteAware {
   void _goToPreviousMonth() async {
     setState(() {
       _selectedDate = DateTime(_selectedDate.year, _selectedDate.month - 1);
+      _currentSpentMoney = 0; // 데이터를 로드하기 전에 초기화 (선택적)
+      _todaySpentMoney = 0;
+      _isLoading = true; // 로딩 상태를 잠시 true로 설정하여 시각적 피드백 제공
     });
     await _loadMonthlySpentData();
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   /// 선택된 월을 다음 달로 변경하고 데이터를 다시 로드/계산합니다.
   void _goToNextMonth() async {
     setState(() {
       _selectedDate = DateTime(_selectedDate.year, _selectedDate.month + 1);
+      _currentSpentMoney = 0; // 데이터를 로드하기 전에 초기화 (선택적)
+      _todaySpentMoney = 0;
+      _isLoading = true; // 로딩 상태를 잠시 true로 설정하여 시각적 피드백 제공
     });
     await _loadMonthlySpentData();
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   @override
@@ -412,24 +428,55 @@ class Cylinder extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
+        final DateTime today = DateTime.now();
         final double maxHeight = constraints.maxHeight;
-        const double maxRatioLimit = 0.888;
+        const double maxRatioLimit = 0.8;
 
-        final double limitMoneyHeight = limitMoneyHeightRatio <= maxRatioLimit
-            ? maxHeight * limitMoneyHeightRatio
-            : maxHeight * maxRatioLimit;
+        final bool isCurrentMonth =
+            selectedDate.year == today.year &&
+            selectedDate.month == today.month;
+        final bool isFutureMonth =
+            selectedDate.year > today.year ||
+            (selectedDate.year == today.year &&
+                selectedDate.month > today.month);
+        final bool isPastMonth = !isCurrentMonth && !isFutureMonth;
 
-        final double spentMoneyHeight = spentMoneyHeightRatio <= maxRatioLimit
-            ? maxHeight * spentMoneyHeightRatio
+        double limitMoneyHeight;
+
+        final double spentMoneyHeight =
+            spentMoneyHeightRatio <= maxRatioLimit * 1.088
+            ? maxHeight * spentMoneyHeightRatio * maxRatioLimit
             : maxHeight * maxRatioLimit;
 
         final double cylinderWidth = screenWidth * 0.38;
 
-        final String formattedSpentMoney =
-            "\$${NumberFormat('#,##0.0', 'en_US').format(currentSpentMoney)}";
+        String formattedSpentMoney = '';
+        String formattedLimitMoney = '';
 
-        final String formattedLimitMoney =
-            "${DateFormat("MMM d", 'en_US').format(DateTime.now())}\n\$${NumberFormat('#,###', 'en_US').format(limitMoney)}";
+        if (isPastMonth) {
+          // 과거 월: 지출 금액은 해당 월의 최종 지출 금액, 한도는 해당 월의 목표 금액
+          formattedLimitMoney =
+              "${DateFormat("MMM", 'en_US').format(selectedDate)}\n\$${NumberFormat("#,###", 'en_US').format(targetMoney)}";
+          formattedSpentMoney =
+              "\$${NumberFormat('#,##0.0', 'en_US').format(currentSpentMoney)}";
+          limitMoneyHeight = maxHeight * maxRatioLimit;
+        } else if (isFutureMonth) {
+          // 미래 월: 지출 금액 0, 한도는 목표 금액 (또는 0)
+          formattedLimitMoney =
+              "${DateFormat("MMM", 'en_US').format(selectedDate)}\n\$0";
+          formattedSpentMoney = "\$0.0";
+          limitMoneyHeight = 0;
+        } else {
+          // 현재 월 (isCurrentMonth)
+          // 현재 월: 지출 금액은 현재까지의 총 지출, 한도는 오늘까지의 누적 한도
+          formattedLimitMoney =
+              "${DateFormat("MMM d", 'en_US').format(today)}\n\$${NumberFormat('#,###', 'en_US').format(limitMoney)}";
+          formattedSpentMoney =
+              "\$${NumberFormat('#,##0.0', 'en_US').format(currentSpentMoney)}";
+          limitMoneyHeight = limitMoneyHeightRatio <= maxRatioLimit
+              ? maxHeight * limitMoneyHeightRatio * maxRatioLimit
+              : maxHeight * maxRatioLimit;
+        }
 
         return Row(
           mainAxisAlignment: MainAxisAlignment.center,
