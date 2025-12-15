@@ -146,8 +146,8 @@ class _HomeState extends State<Home> with RouteAware {
         : 0;
 
     // 지출 비율이 1을 초과하는 경우 1로 설정하여 실린더가 넘치지 않도록 제한
-    if (_spentMoneyHeightRatio > 1.0) {
-      _spentMoneyHeightRatio = 1.0;
+    if (_spentMoneyHeightRatio > 1.6) {
+      _spentMoneyHeightRatio = 1.6;
     }
 
     // 상태가 변경될 수 있도록 setState 호출
@@ -444,9 +444,14 @@ class Cylinder extends StatelessWidget {
         double limitMoneyHeight;
 
         final double spentMoneyHeight =
-            spentMoneyHeightRatio <= maxRatioLimit * 1.088
+            spentMoneyHeightRatio <= maxRatioLimit * 1.5
             ? maxHeight * spentMoneyHeightRatio * maxRatioLimit
-            : maxHeight * maxRatioLimit;
+            : maxHeight * maxRatioLimit * 1.25;
+
+        final double spentMoneyTextHeight =
+            spentMoneyHeightRatio <= maxRatioLimit * 1.44
+            ? maxHeight * spentMoneyHeightRatio * maxRatioLimit
+            : maxHeight * maxRatioLimit * 1.188;
 
         final double cylinderWidth = screenWidth * 0.38;
 
@@ -555,7 +560,7 @@ class Cylinder extends StatelessWidget {
                     ),
                     textAlign: TextAlign.start,
                   ),
-                  SizedBox(height: spentMoneyHeight),
+                  SizedBox(height: spentMoneyTextHeight),
                 ],
               ),
             ),
