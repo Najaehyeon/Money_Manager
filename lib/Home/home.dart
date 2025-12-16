@@ -23,7 +23,7 @@ class _HomeState extends State<Home> with RouteAware {
   String state = '초기 상태';
   // 상태 변수 (이전과 동일)
   double _targetMoney = 0;
-  DateTime _selectedDate = DateTime(2025, 11);
+  DateTime _selectedDate = DateTime.now();
   double _currentSpentMoney = 0;
   double _monthDailyLimitMoney = 0;
   double _limitMoneyHeightRatio = 0;
@@ -31,6 +31,9 @@ class _HomeState extends State<Home> with RouteAware {
   double _todaySpentMoney = 0;
   double _dailyLimit = 0;
   bool _isLoading = true;
+  // Week-Chart State Variable
+  bool _isWeekCharted = false;
+  DateTime _selectedWeekDate = DateTime.now();
 
   @override
   void initState() {
@@ -220,6 +223,20 @@ class _HomeState extends State<Home> with RouteAware {
     }
   }
 
+  // ---------------------------------------------------------------
+  //                              Week
+  // ---------------------------------------------------------------
+  void setWeekChart() {
+    _loadThisWeekData();
+    setState(() {
+      _isWeekCharted = !_isWeekCharted;
+    });
+  }
+
+  void _loadThisWeekData() {
+    _selectedWeekDate = DateTime.now();
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -234,6 +251,8 @@ class _HomeState extends State<Home> with RouteAware {
           selectedDate: _selectedDate,
           onPreviousMonth: _goToPreviousMonth,
           onNextMonth: _goToNextMonth,
+          setWeekCharted: setWeekChart,
+          isWeekCharted: _isWeekCharted,
         ),
         TodaySpentMoney(
           todaySpentMoney: _todaySpentMoney,
@@ -270,12 +289,16 @@ class Header extends StatelessWidget {
   final DateTime selectedDate;
   final VoidCallback onPreviousMonth;
   final VoidCallback onNextMonth;
+  final VoidCallback setWeekCharted;
+  final bool isWeekCharted;
 
   const Header({
     super.key,
     required this.selectedDate,
     required this.onPreviousMonth,
     required this.onNextMonth,
+    required this.setWeekCharted,
+    required this.isWeekCharted,
   });
 
   @override
@@ -325,17 +348,15 @@ class Header extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(right: 8),
             child: IconButton.filled(
-              onPressed: () {
-                // TODO: 통계 화면으로 이동하는 로직 추가
-              },
-              icon: const Icon(
+              onPressed: setWeekCharted,
+              icon: Icon(
                 Icons.bar_chart,
                 size: 36,
-                color: Colors.black,
+                color: isWeekCharted ? Colors.white : Colors.black,
               ),
               style: IconButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: Colors.black,
+                backgroundColor: isWeekCharted ? Colors.black : Colors.white,
+                foregroundColor: isWeekCharted ? Colors.white : Colors.black,
               ),
             ),
           ),
@@ -430,7 +451,7 @@ class Cylinder extends StatelessWidget {
       builder: (BuildContext context, BoxConstraints constraints) {
         final DateTime today = DateTime.now();
         final double maxHeight = constraints.maxHeight;
-        const double maxRatioLimit = 0.8;
+        const double maxRatioLimit = 0.86;
 
         final bool isCurrentMonth =
             selectedDate.year == today.year &&
