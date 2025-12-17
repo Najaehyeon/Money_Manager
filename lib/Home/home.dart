@@ -34,6 +34,9 @@ class _HomeState extends State<Home> with RouteAware {
   // Week-Chart State Variable
   bool _isWeekCharted = false;
   DateTime _selectedWeekDate = DateTime.now();
+  DateTime _selectedWeekDateMin = DateTime.now();
+  DateTime _selectedWeekDateMax = DateTime.now();
+  double _weeklyLimit = 0;
 
   @override
   void initState() {
@@ -132,9 +135,11 @@ class _HomeState extends State<Home> with RouteAware {
       _monthDailyLimitMoney = 0;
       _limitMoneyHeightRatio = 0;
       _dailyLimit = 0;
+      _weeklyLimit = 0;
     } else {
       // 1. 오늘의 일일 한도 금액 (Daily Limit)
       _dailyLimit = _targetMoney / totalDaysInCurrentMonth;
+      _weeklyLimit = _targetMoney / 7;
 
       // 2. 현재 일자까지의 누적 한도 금액 (limitMoney)
       _monthDailyLimitMoney = _dailyLimit * currentDay;
@@ -224,7 +229,7 @@ class _HomeState extends State<Home> with RouteAware {
   }
 
   // ---------------------------------------------------------------
-  //                              Week
+  //                         Week Functions
   // ---------------------------------------------------------------
   void setWeekChart() {
     _loadThisWeekData();
@@ -235,6 +240,33 @@ class _HomeState extends State<Home> with RouteAware {
 
   void _loadThisWeekData() {
     _selectedWeekDate = DateTime.now();
+    final thisWeekYear = _selectedWeekDate.year;
+    final thisWeekMonth = _selectedWeekDate.month;
+    final thisWeekDay = _selectedWeekDate.day;
+    _selectedWeekDateMin = DateTime(
+      thisWeekYear,
+      thisWeekMonth,
+      thisWeekDay - _selectedWeekDate.weekday,
+    );
+    _selectedWeekDateMax = DateTime(
+      thisWeekYear,
+      thisWeekMonth,
+      thisWeekDay + (6 - _selectedWeekDate.weekday),
+    );
+  }
+
+  void _goToPreviousWeek() {
+    setState(() {
+      _selectedWeekDateMin = _selectedWeekDateMin.subtract(Duration(days: 7));
+      _selectedWeekDateMax = _selectedWeekDateMax.subtract(Duration(days: 7));
+    });
+  }
+
+  void _goToNextWeek() {
+    setState(() {
+      _selectedWeekDateMin = _selectedWeekDateMin.add(Duration(days: 7));
+      _selectedWeekDateMax = _selectedWeekDateMax.add(Duration(days: 7));
+    });
   }
 
   @override
@@ -253,10 +285,16 @@ class _HomeState extends State<Home> with RouteAware {
           onNextMonth: _goToNextMonth,
           setWeekCharted: setWeekChart,
           isWeekCharted: _isWeekCharted,
+          selectedWeekDateMin: _selectedWeekDateMin,
+          selectedWeekDateMax: _selectedWeekDateMax,
+          onPreviousWeek: _goToPreviousWeek,
+          onNextWeek: _goToNextWeek,
         ),
         TodaySpentMoney(
           todaySpentMoney: _todaySpentMoney,
           dailyLimit: _dailyLimit,
+          isWeekCharted: _isWeekCharted,
+          weeklyLimit: _weeklyLimit,
         ),
         const SizedBox(height: 24),
         Expanded(
@@ -291,6 +329,10 @@ class Header extends StatelessWidget {
   final VoidCallback onNextMonth;
   final VoidCallback setWeekCharted;
   final bool isWeekCharted;
+  final DateTime selectedWeekDateMin;
+  final DateTime selectedWeekDateMax;
+  final VoidCallback onPreviousWeek;
+  final VoidCallback onNextWeek;
 
   const Header({
     super.key,
@@ -299,6 +341,10 @@ class Header extends StatelessWidget {
     required this.onNextMonth,
     required this.setWeekCharted,
     required this.isWeekCharted,
+    required this.selectedWeekDateMin,
+    required this.selectedWeekDateMax,
+    required this.onPreviousWeek,
+    required this.onNextWeek,
   });
 
   @override
@@ -307,6 +353,14 @@ class Header extends StatelessWidget {
       'MMM. yyyy',
       'en_US',
     ).format(selectedDate);
+    final String formattedWeekDateMin = DateFormat(
+      'MM/dd',
+      'en_US',
+    ).format(selectedWeekDateMin);
+    final String formattedWeekDateMax = DateFormat(
+      'MM/dd',
+      'en_US',
+    ).format(selectedWeekDateMax);
 
     return Padding(
       padding: const EdgeInsets.all(8.0),
@@ -316,7 +370,7 @@ class Header extends StatelessWidget {
           Row(
             children: [
               IconButton(
-                onPressed: onPreviousMonth,
+                onPressed: isWeekCharted ? onPreviousWeek : onPreviousMonth,
                 icon: const Icon(
                   Icons.chevron_left_rounded,
                   size: 48,
@@ -326,7 +380,9 @@ class Header extends StatelessWidget {
               ),
               const SizedBox(width: 4),
               Text(
-                formattedDate,
+                isWeekCharted
+                    ? "$formattedWeekDateMin~$formattedWeekDateMax"
+                    : formattedDate,
                 style: const TextStyle(
                   color: Colors.black,
                   fontSize: 24,
@@ -335,7 +391,7 @@ class Header extends StatelessWidget {
               ),
               const SizedBox(width: 4),
               IconButton(
-                onPressed: onNextMonth,
+                onPressed: isWeekCharted ? onNextWeek : onNextMonth,
                 icon: const Icon(
                   Icons.chevron_right_rounded,
                   size: 48,
@@ -373,11 +429,15 @@ class Header extends StatelessWidget {
 class TodaySpentMoney extends StatelessWidget {
   final double todaySpentMoney;
   final double dailyLimit;
+  final bool isWeekCharted;
+  final double weeklyLimit;
 
   const TodaySpentMoney({
     super.key,
     required this.todaySpentMoney,
     required this.dailyLimit,
+    required this.isWeekCharted,
+    required this.weeklyLimit,
   });
 
   @override
@@ -392,10 +452,15 @@ class TodaySpentMoney extends StatelessWidget {
       'en_US',
     ).format(dailyLimit);
 
+    final String formattedWeeklyLimit = NumberFormat(
+      '#,###',
+      'en_US',
+    ).format(weeklyLimit);
+
     return Column(
       children: [
-        const Text(
-          "Today Spent",
+        Text(
+          isWeekCharted ? "Week Spent" : "Today Spent",
           style: TextStyle(
             fontSize: 16,
             color: _primaryColor,
@@ -410,7 +475,9 @@ class TodaySpentMoney extends StatelessWidget {
           ),
         ),
         Text(
-          "Daily limit: Under \$$formattedDailyLimit",
+          isWeekCharted
+              ? "Weekly limit: Under \$$formattedWeeklyLimit"
+              : "Daily limit: Under \$$formattedDailyLimit",
           style: const TextStyle(
             fontSize: 12,
             color: _primaryColor,
