@@ -298,15 +298,67 @@ class _HomeState extends State<Home> with RouteAware {
         ),
         const SizedBox(height: 24),
         Expanded(
-          child: Cylinder(
-            screenWidth: screenWidth,
-            currentSpentMoney: _currentSpentMoney,
-            limitMoney: _monthDailyLimitMoney,
-            limitMoneyHeightRatio: _limitMoneyHeightRatio,
-            spentMoneyHeightRatio: _spentMoneyHeightRatio,
-            targetMoney: _targetMoney,
-            selectedDate: _selectedDate,
-          ),
+          child: _isWeekCharted
+              ? Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 24.0),
+                  child: Container(
+                    width: MediaQuery.of(context).size.width * 0.9,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(32),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                "This week",
+                                style: TextStyle(fontSize: 16),
+                              ),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    "\$3,013",
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  Text("Spent"),
+                                ],
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 12),
+                          FractionallySizedBox(
+                            widthFactor: 0.9,
+                            child: Container(
+                              height: 200,
+                              decoration: BoxDecoration(
+                                color: Colors.blue,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                )
+              : Cylinder(
+                  screenWidth: screenWidth,
+                  currentSpentMoney: _currentSpentMoney,
+                  limitMoney: _monthDailyLimitMoney,
+                  limitMoneyHeightRatio: _limitMoneyHeightRatio,
+                  spentMoneyHeightRatio: _spentMoneyHeightRatio,
+                  targetMoney: _targetMoney,
+                  selectedDate: _selectedDate,
+                ),
         ),
         const SizedBox(height: 24),
         TargetMonthlyMax(
