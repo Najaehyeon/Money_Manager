@@ -37,6 +37,9 @@ class _HomeState extends State<Home> with RouteAware {
   DateTime _selectedWeekDateMin = DateTime.now();
   DateTime _selectedWeekDateMax = DateTime.now();
   double _weeklyLimit = 0;
+  List<double> _weeklySpending = List.filled(7, 0.0);
+  int fromThisWeekCount = 0;
+  String weekStatsTitle = "This week";
 
   @override
   void initState() {
@@ -81,46 +84,78 @@ class _HomeState extends State<Home> with RouteAware {
   /// 선택된 월의 지출 데이터를 로드하고, 총 지출 및 오늘 지출을 계산합니다.
   Future<void> _loadMonthlySpentData() async {
     final prefs = await SharedPreferences.getInstance();
-    final String key = _getMonthlyDataKey(_selectedDate);
 
-    // 🚨 수정: getStringList를 사용하여 JSON 문자열의 리스트를 받아옵니다.
-    final List<String>? monthlyDataList = prefs.getStringList(key);
+    // 불러와야 할 월(Month) 키들을 저장할 셋 (중복 방지)
+    Set<String> keysToLoad = {
+      _getMonthlyDataKey(_selectedDate), // 현재 선택된 월
+      _getMonthlyDataKey(_selectedWeekDateMin), // 주간 시작일의 월
+      _getMonthlyDataKey(_selectedWeekDateMax), // 주간 종료일의 월
+    };
+
+    List<String> allTransactions = [];
+    for (String key in keysToLoad) {
+      final List<String>? data = prefs.getStringList(key);
+      if (data != null) allTransactions.addAll(data);
+    }
 
     double totalSpent = 0;
     double todaySpent = 0;
-    final String todayDate = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    List<double> tempWeeklySpent = List.filled(7, 0.0);
 
-    if (monthlyDataList != null && monthlyDataList.isNotEmpty) {
-      try {
-        // 리스트의 각 문자열 요소를 순회하며 개별적으로 JSON 디코딩합니다.
-        for (String transactionJson in monthlyDataList) {
-          final Map<String, dynamic> item = json.decode(transactionJson);
+    final String todayDateStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
 
-          // price는 문자열로 저장되어 있으므로 double로 변환
-          final double price =
-              double.tryParse(item['price']?.toString() ?? '0') ?? 0;
+    // 날짜 비교를 위해 시간 정보가 없는 날짜 생성
+    DateTime minDate = DateTime(
+      _selectedWeekDateMin.year,
+      _selectedWeekDateMin.month,
+      _selectedWeekDateMin.day,
+    );
+    DateTime maxDate = DateTime(
+      _selectedWeekDateMax.year,
+      _selectedWeekDateMax.month,
+      _selectedWeekDateMax.day,
+    );
 
-          // 1. 선택된 월의 총 지출 금액 계산
-          totalSpent += price;
+    for (String transactionJson in allTransactions) {
+      final Map<String, dynamic> item = json.decode(transactionJson);
+      final double price =
+          double.tryParse(item['price']?.toString() ?? '0') ?? 0;
+      final String itemDateStr = item['date']?.toString() ?? '';
 
-          // 2. 현재 달력상의 오늘 지출 금액 계산
-          final String itemDate = item['date']?.toString() ?? '';
-          if (itemDate == todayDate) {
-            todaySpent += price;
-          }
-        }
-      } catch (e) {
-        // 데이터 파싱 오류 처리
-        print('Error parsing monthly data: $e');
+      // 월 총액 계산 (현재 _selectedDate 기준)
+      if (itemDateStr.startsWith(DateFormat('yyyy-MM').format(_selectedDate))) {
+        totalSpent += price;
+      }
+
+      // 오늘 총액
+      if (itemDateStr == todayDateStr) {
+        todaySpent += price;
+      }
+
+      // 주간 지출 계산
+      DateTime itemDate = DateTime.parse(itemDateStr);
+      DateTime compareDate = DateTime(
+        itemDate.year,
+        itemDate.month,
+        itemDate.day,
+      );
+
+      if ((compareDate.isAtSameMomentAs(minDate) ||
+              compareDate.isAfter(minDate)) &&
+          (compareDate.isAtSameMomentAs(maxDate) ||
+              compareDate.isBefore(maxDate))) {
+        // 일요일이 0이 되도록 인덱스 계산 (DateTime.weekday는 월=1...일=7)
+        int weekdayIdx = itemDate.weekday % 7;
+        tempWeeklySpent[weekdayIdx] += price;
       }
     }
 
-    // 상태 업데이트
-    _currentSpentMoney = totalSpent;
-    _todaySpentMoney = todaySpent;
-
-    // 데이터가 업데이트되었으므로 비율 및 한도를 다시 계산
-    _calculateMoneyAndRatio();
+    setState(() {
+      _currentSpentMoney = totalSpent;
+      _todaySpentMoney = todaySpent;
+      _weeklySpending = tempWeeklySpent;
+      _calculateMoneyAndRatio();
+    });
   }
 
   /// 목표 금액과 지출 금액을 바탕으로 모든 비율과 한도 금액을 계산합니다.
@@ -255,18 +290,46 @@ class _HomeState extends State<Home> with RouteAware {
     );
   }
 
-  void _goToPreviousWeek() {
+  void _goToPreviousWeek() async {
     setState(() {
-      _selectedWeekDateMin = _selectedWeekDateMin.subtract(Duration(days: 7));
-      _selectedWeekDateMax = _selectedWeekDateMax.subtract(Duration(days: 7));
+      _selectedWeekDateMin = _selectedWeekDateMin.subtract(
+        const Duration(days: 7),
+      );
+      _selectedWeekDateMax = _selectedWeekDateMax.subtract(
+        const Duration(days: 7),
+      );
+      _isLoading = true;
+      fromThisWeekCount--;
     });
+    _setWeekStatsTitle();
+    await _loadMonthlySpentData();
+    setState(() => _isLoading = false);
   }
 
-  void _goToNextWeek() {
+  void _goToNextWeek() async {
     setState(() {
-      _selectedWeekDateMin = _selectedWeekDateMin.add(Duration(days: 7));
-      _selectedWeekDateMax = _selectedWeekDateMax.add(Duration(days: 7));
+      _selectedWeekDateMin = _selectedWeekDateMin.add(const Duration(days: 7));
+      _selectedWeekDateMax = _selectedWeekDateMax.add(const Duration(days: 7));
+      _isLoading = true;
+      fromThisWeekCount++;
     });
+    _setWeekStatsTitle();
+    await _loadMonthlySpentData();
+    setState(() => _isLoading = false);
+  }
+
+  void _setWeekStatsTitle() {
+    if (fromThisWeekCount == 0) {
+      weekStatsTitle = "This week";
+    } else if (fromThisWeekCount == -1) {
+      weekStatsTitle = "Last week";
+    } else if (fromThisWeekCount == 1) {
+      weekStatsTitle = "Next week";
+    } else if (fromThisWeekCount < -1) {
+      weekStatsTitle = "${fromThisWeekCount.abs()} weeks ago";
+    } else {
+      weekStatsTitle = "$fromThisWeekCount weeks later";
+    }
   }
 
   @override
@@ -276,6 +339,8 @@ class _HomeState extends State<Home> with RouteAware {
     }
 
     final screenWidth = MediaQuery.of(context).size.width;
+
+    const double limitLineHeight = 100.0;
 
     return Column(
       children: [
@@ -295,6 +360,8 @@ class _HomeState extends State<Home> with RouteAware {
           dailyLimit: _dailyLimit,
           isWeekCharted: _isWeekCharted,
           weeklyLimit: _weeklyLimit,
+          weeklySpending: _weeklySpending,
+          weekStatsTitle: weekStatsTitle,
         ),
         const SizedBox(height: 24),
         Expanded(
@@ -302,10 +369,18 @@ class _HomeState extends State<Home> with RouteAware {
               ? Padding(
                   padding: const EdgeInsets.symmetric(vertical: 24.0),
                   child: Container(
-                    width: MediaQuery.of(context).size.width * 0.9,
+                    width: MediaQuery.of(context).size.width * 0.92,
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(32),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.grey.shade300,
+                          spreadRadius: 5,
+                          blurRadius: 7,
+                          offset: Offset(0, 3), // changes position of shadow
+                        ),
+                      ],
                     ),
                     child: Padding(
                       padding: const EdgeInsets.all(24),
@@ -317,31 +392,196 @@ class _HomeState extends State<Home> with RouteAware {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                "This week",
+                                weekStatsTitle,
                                 style: TextStyle(fontSize: 16),
                               ),
                               Column(
                                 crossAxisAlignment: CrossAxisAlignment.end,
                                 children: [
                                   Text(
-                                    "\$3,013",
-                                    style: TextStyle(
+                                    "\$${NumberFormat(
+                                      '#,##0.0',
+                                      'en_US',
+                                    ).format(_weeklySpending.reduce((a, b) => a + b))}",
+                                    style: const TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
-                                  Text("Spent"),
+                                  const Text(
+                                    "Spent",
+                                    style: TextStyle(fontSize: 12),
+                                  ),
                                 ],
                               ),
                             ],
                           ),
-                          SizedBox(height: 12),
-                          FractionallySizedBox(
-                            widthFactor: 0.9,
-                            child: Container(
-                              height: 200,
-                              decoration: BoxDecoration(
-                                color: Colors.blue,
+                          Expanded(
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: List.generate(
+                                8,
+                                (index) {
+                                  // 마지막 8번째 칸은 한도 금액 텍스트 표시용
+                                  if (index == 7) {
+                                    return Expanded(
+                                      child: Stack(
+                                        clipBehavior: Clip.none,
+                                        children: [
+                                          Positioned(
+                                            bottom:
+                                                limitLineHeight +
+                                                18, // 선보다 약간 위
+                                            left: 0,
+                                            child: FittedBox(
+                                              fit: BoxFit.fill,
+                                              child: Padding(
+                                                padding: const EdgeInsets.only(
+                                                  left: 8,
+                                                ),
+                                                child: Text(
+                                                  "\$${_dailyLimit.toStringAsFixed(0)}",
+                                                  style: const TextStyle(
+                                                    fontSize: 12,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: Colors.black,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  }
+
+                                  // 0~6일 지출 데이터
+                                  double daySpent = _weeklySpending[index];
+                                  // 한도 대비 높이 계산 (한도액일 때 100px)
+                                  double barHeight;
+                                  if (daySpent == 0) {
+                                    barHeight = 0;
+                                  } else {
+                                    barHeight =
+                                        (daySpent / _dailyLimit) *
+                                                limitLineHeight >
+                                            limitLineHeight
+                                        ? limitLineHeight * 1.8
+                                        : (daySpent / _dailyLimit) *
+                                              limitLineHeight;
+                                  }
+
+                                  // 오늘 날짜 여부 확인
+                                  DateTime now = DateTime.now();
+                                  bool isToday =
+                                      (now.weekday % 7 == index) &&
+                                      _selectedWeekDateMin.isBefore(now) &&
+                                      _selectedWeekDateMax.isAfter(now);
+
+                                  String spentText = daySpent > 0
+                                      ? NumberFormat(
+                                          '#,##0',
+                                          'en_US',
+                                        ).format(daySpent)
+                                      : "0";
+
+                                  return Expanded(
+                                    child: Column(
+                                      children: [
+                                        Expanded(
+                                          flex: 8,
+                                          child: Stack(
+                                            clipBehavior: Clip.none,
+                                            alignment: Alignment.bottomCenter,
+                                            children: [
+                                              // 1. 권장 한도 가이드 선 (검은색)
+                                              Positioned(
+                                                bottom: limitLineHeight,
+                                                child: Container(
+                                                  width:
+                                                      36, // 막대보다 넓게 설정하여 선처럼 보이게
+                                                  height: 0.5,
+                                                  color: Colors.black45,
+                                                ),
+                                              ),
+                                              // 2. 실제 지출 막대
+                                              Column(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.end,
+                                                children: [
+                                                  SizedBox(
+                                                    height: 14, // 텍스트 영역 고정 높이
+                                                    child: FittedBox(
+                                                      fit: BoxFit.scaleDown,
+                                                      child: Text(
+                                                        spentText,
+                                                        style: TextStyle(
+                                                          fontSize: 10,
+                                                          color: Colors.black,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  Container(
+                                                    width: 16,
+                                                    height: barHeight,
+                                                    decoration: BoxDecoration(
+                                                      color: isToday
+                                                          ? const Color(
+                                                              0xFF00D0FF,
+                                                            )
+                                                          : const Color(
+                                                              0xFF0000BB,
+                                                            ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        Container(
+                                          height: 0.5,
+                                          color: Colors.black,
+                                        ),
+                                        Expanded(
+                                          flex: 1,
+                                          child: FittedBox(
+                                            // 텍스트가 길어질 수 있으므로 FittedBox 사용
+                                            fit: BoxFit.scaleDown,
+                                            child: Row(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.center,
+                                              children: [
+                                                Text(
+                                                  // 해당 인덱스의 실제 날짜 계산
+                                                  "${_selectedWeekDateMin.add(Duration(days: index)).day}",
+                                                  style: const TextStyle(
+                                                    fontSize: 10,
+                                                  ),
+                                                ),
+                                                Text(
+                                                  [
+                                                    "(S)",
+                                                    "(M)",
+                                                    "(T)",
+                                                    "(W)",
+                                                    "(T)",
+                                                    "(F)",
+                                                    "(S)",
+                                                  ][index],
+                                                  style: const TextStyle(
+                                                    fontSize: 10,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
                               ),
                             ),
                           ),
@@ -483,6 +723,8 @@ class TodaySpentMoney extends StatelessWidget {
   final double dailyLimit;
   final bool isWeekCharted;
   final double weeklyLimit;
+  final List<double> weeklySpending;
+  final String weekStatsTitle;
 
   const TodaySpentMoney({
     super.key,
@@ -490,6 +732,8 @@ class TodaySpentMoney extends StatelessWidget {
     required this.dailyLimit,
     required this.isWeekCharted,
     required this.weeklyLimit,
+    required this.weeklySpending,
+    required this.weekStatsTitle,
   });
 
   @override
@@ -509,17 +753,24 @@ class TodaySpentMoney extends StatelessWidget {
       'en_US',
     ).format(weeklyLimit);
 
+    final String formattedWeeklySpentMoney = NumberFormat(
+      '#,###',
+      'en_US',
+    ).format(weeklySpending.reduce((a, b) => a + b));
+
     return Column(
       children: [
         Text(
-          isWeekCharted ? "Week Spent" : "Today Spent",
+          isWeekCharted ? "$weekStatsTitle Spent" : "Today Spent",
           style: TextStyle(
             fontSize: 16,
             color: _primaryColor,
           ),
         ),
         Text(
-          "\$ $formattedTodaySpent",
+          isWeekCharted
+              ? "\$$formattedWeeklySpentMoney"
+              : "\$ $formattedTodaySpent",
           style: const TextStyle(
             fontSize: 32,
             fontWeight: FontWeight.w600,
@@ -570,7 +821,13 @@ class Cylinder extends StatelessWidget {
       builder: (BuildContext context, BoxConstraints constraints) {
         final DateTime today = DateTime.now();
         final double maxHeight = constraints.maxHeight;
-        const double maxRatioLimit = 0.86;
+
+        // 1. 텍스트가 표시될 상단 안전 영역 확보 (글자 크기와 행간 고려)
+        const double topReservedSpace = 40.0;
+        final double drawingAreaHeight = maxHeight - topReservedSpace;
+
+        // 2. 최대 비율 제한 (drawingAreaHeight 내에서의 비율)
+        const double maxRatioLimit = 0.9;
 
         final bool isCurrentMonth =
             selectedDate.year == today.year &&
@@ -583,15 +840,19 @@ class Cylinder extends StatelessWidget {
 
         double limitMoneyHeight;
 
+        // 3. 지출 막대 높이 계산 (drawingAreaHeight 기준)
+        // clamp를 사용하여 어떤 경우에도 drawingAreaHeight를 넘지 않게 설정
         final double spentMoneyHeight =
-            spentMoneyHeightRatio <= maxRatioLimit * 1.5
-            ? maxHeight * spentMoneyHeightRatio * maxRatioLimit
-            : maxHeight * maxRatioLimit * 1.25;
+            (spentMoneyHeightRatio * drawingAreaHeight).clamp(
+              0.0,
+              drawingAreaHeight * 1.2,
+            ); // 한도 초과 시 약간 더 올라가게 설정 가능
 
-        final double spentMoneyTextHeight =
-            spentMoneyHeightRatio <= maxRatioLimit * 1.44
-            ? maxHeight * spentMoneyHeightRatio * maxRatioLimit
-            : maxHeight * maxRatioLimit * 1.188;
+        // 4. 텍스트 위치 계산 (막대 바로 위 혹은 최대 높이 제한)
+        final double spentMoneyTextHeight = spentMoneyHeight.clamp(
+          0.0,
+          drawingAreaHeight + 20,
+        );
 
         final double cylinderWidth = screenWidth * 0.38;
 
@@ -599,34 +860,32 @@ class Cylinder extends StatelessWidget {
         String formattedLimitMoney = '';
 
         if (isPastMonth) {
-          // 과거 월: 지출 금액은 해당 월의 최종 지출 금액, 한도는 해당 월의 목표 금액
           formattedLimitMoney =
               "${DateFormat("MMM", 'en_US').format(selectedDate)}\n\$${NumberFormat("#,###", 'en_US').format(targetMoney)}";
           formattedSpentMoney =
               "\$${NumberFormat('#,##0.0', 'en_US').format(currentSpentMoney)}";
-          limitMoneyHeight = maxHeight * maxRatioLimit;
+          limitMoneyHeight = drawingAreaHeight * maxRatioLimit;
         } else if (isFutureMonth) {
-          // 미래 월: 지출 금액 0, 한도는 목표 금액 (또는 0)
           formattedLimitMoney =
               "${DateFormat("MMM", 'en_US').format(selectedDate)}\n\$0";
           formattedSpentMoney = "\$0.0";
           limitMoneyHeight = 0;
         } else {
-          // 현재 월 (isCurrentMonth)
-          // 현재 월: 지출 금액은 현재까지의 총 지출, 한도는 오늘까지의 누적 한도
           formattedLimitMoney =
               "${DateFormat("MMM d", 'en_US').format(today)}\n\$${NumberFormat('#,###', 'en_US').format(limitMoney)}";
           formattedSpentMoney =
               "\$${NumberFormat('#,##0.0', 'en_US').format(currentSpentMoney)}";
-          limitMoneyHeight = limitMoneyHeightRatio <= maxRatioLimit
-              ? maxHeight * limitMoneyHeightRatio * maxRatioLimit
-              : maxHeight * maxRatioLimit;
+          limitMoneyHeight = (limitMoneyHeightRatio * drawingAreaHeight).clamp(
+            0.0,
+            drawingAreaHeight * maxRatioLimit,
+          );
         }
 
         return Row(
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
+            // 왼쪽: 한도 금액 텍스트
             Expanded(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.end,
@@ -637,18 +896,17 @@ class Cylinder extends StatelessWidget {
                     style: const TextStyle(
                       color: Colors.black,
                       fontWeight: FontWeight.w600,
-                      fontSize: 14,
+                      fontSize: 13,
                     ),
                     textAlign: TextAlign.end,
                   ),
-                  SizedBox(
-                    height: limitMoneyHeight,
-                  ),
+                  SizedBox(height: limitMoneyHeight),
                 ],
               ),
             ),
             const SizedBox(width: 8),
 
+            // 중앙: 실린더
             ClipRRect(
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(8),
@@ -662,16 +920,16 @@ class Cylinder extends StatelessWidget {
                   Container(
                     width: cylinderWidth,
                     height: maxHeight,
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                    ),
+                    color: Colors.white,
                   ),
+                  // 실제 차오르는 부분 (drawingAreaHeight 내에서 움직임)
                   Container(
                     width: cylinderWidth,
-                    height: spentMoneyHeight,
-                    decoration: const BoxDecoration(
-                      color: _primaryColor,
-                    ),
+                    height: spentMoneyHeight.clamp(
+                      0.0,
+                      maxHeight,
+                    ), // 실린더 몸통을 넘지 않게 함
+                    decoration: const BoxDecoration(color: _primaryColor),
                   ),
                   Positioned(
                     bottom: limitMoneyHeight,
@@ -686,20 +944,25 @@ class Cylinder extends StatelessWidget {
             ),
             const SizedBox(width: 8),
 
+            // 오른쪽: 지출 금액 텍스트
             Expanded(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.end,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    formattedSpentMoney,
-                    style: const TextStyle(
-                      color: _primaryColor,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
+                  // FittedBox를 사용하여 텍스트가 길어져도 옆으로 터지지 않게 보호
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      formattedSpentMoney,
+                      style: const TextStyle(
+                        color: _primaryColor,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
                     ),
-                    textAlign: TextAlign.start,
                   ),
+                  // 텍스트가 상단 여백(topReservedSpace)을 침범하지 않도록 제한된 높이 사용
                   SizedBox(height: spentMoneyTextHeight),
                 ],
               ),
