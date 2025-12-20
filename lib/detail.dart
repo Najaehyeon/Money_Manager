@@ -13,7 +13,62 @@ class _DetailState extends State<Detail> {
     return SafeArea(
       child: Column(
         children: [
-          Text("Detail"),
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    IconButton(
+                      onPressed: () {},
+                      icon: const Icon(
+                        Icons.chevron_left_rounded,
+                        size: 48,
+                        color: Colors.black,
+                      ),
+                      padding: const EdgeInsets.all(0),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      "Dec. 2025",
+                      style: const TextStyle(
+                        color: Colors.black,
+                        fontSize: 24,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    IconButton(
+                      onPressed: () {},
+                      icon: const Icon(
+                        Icons.chevron_right_rounded,
+                        size: 48,
+                        color: Colors.black,
+                      ),
+                      padding: const EdgeInsets.all(0),
+                    ),
+                  ],
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: IconButton.filled(
+                    onPressed: () {},
+                    icon: Icon(
+                      Icons.calendar_month_rounded,
+                      size: 28,
+                      color: Colors.black,
+                    ),
+                    style: IconButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: Colors.black,
+                      padding: EdgeInsets.all(12),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
