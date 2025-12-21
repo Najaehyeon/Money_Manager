@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 class Detail extends StatefulWidget {
   const Detail({super.key});
@@ -67,6 +68,17 @@ class _DetailState extends State<Detail> {
                   ),
                 ),
               ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Container(
+              width: MediaQuery.of(context).size.width,
+              height: 72,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
           ),
         ],
