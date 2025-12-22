@@ -81,6 +81,22 @@ class _DetailState extends State<Detail> {
               ),
             ),
           ),
+          ListView.builder(
+            itemCount: 10,
+            itemBuilder: (BuildContext ctx, int idx) {
+              return Column(
+                children: [
+                  Text("Hello"),
+                  ListView.builder(
+                    itemCount: 10,
+                    itemBuilder: (BuildContext ctx, int idx) {
+                      return Text("123");
+                    },
+                  ),
+                ],
+              );
+            },
+          ),
         ],
       ),
     );
