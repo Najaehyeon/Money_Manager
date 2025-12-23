@@ -1,11 +1,16 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:money_manager/Home/post.dart';
 import 'package:money_manager/detail.dart';
 import 'package:money_manager/Home/home.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 final RouteObserver<PageRoute> routeObserver = RouteObserver<PageRoute>();
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  unawaited(MobileAds.instance.initialize());
   runApp(const MoneyManager());
 }
 

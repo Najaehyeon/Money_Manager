@@ -273,7 +273,7 @@ class _HomeState extends State<Home> with RouteAware {
     });
   }
 
-  void _loadThisWeekData() {
+  void _loadThisWeekData() async {
     _selectedWeekDate = DateTime.now();
     final thisWeekYear = _selectedWeekDate.year;
     final thisWeekMonth = _selectedWeekDate.month;
@@ -288,6 +288,7 @@ class _HomeState extends State<Home> with RouteAware {
       thisWeekMonth,
       thisWeekDay + (6 - _selectedWeekDate.weekday),
     );
+    await _loadMonthlySpentData();
   }
 
   void _goToPreviousWeek() async {
