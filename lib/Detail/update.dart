@@ -4,47 +4,48 @@ import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
-class Post extends StatefulWidget {
-  const Post({super.key});
+class UpdatePage extends StatefulWidget {
+  final int itemIndex;
+  final Map<String, dynamic> initialData;
+
+  const UpdatePage({
+    super.key,
+    required this.itemIndex,
+    required this.initialData,
+  });
 
   @override
-  State<Post> createState() => _PostState();
+  State<UpdatePage> createState() => _UpdatePageState();
 }
 
-class _PostState extends State<Post> {
-  // 캘린더 관련 상태
-  DateTime _selectedDate = DateTime.now();
+class _UpdatePageState extends State<UpdatePage> {
+  // 상태 변수들
+  late DateTime _selectedDate;
   String get formatedDate => DateFormat('MMMM d, yyyy').format(_selectedDate);
   String get _storageDate => DateFormat('yyyy-MM-dd').format(_selectedDate);
 
-  // 카테고리 관련 상태
   List<String> categories = [];
   String? _selectedCategory;
   late TextEditingController _setAddCategory;
   final FocusNode _focusNode = FocusNode();
   bool isCategoryDeleteActivated = false;
 
-  // 입력 필드 관련 상태
   late TextEditingController _detailController;
   late TextEditingController _priceController;
 
   @override
   void initState() {
     super.initState();
+    // 초기값 세팅
+    _selectedDate = DateTime.parse(widget.initialData['date']);
+    _selectedCategory = widget.initialData['category'];
+    _detailController = TextEditingController(
+      text: widget.initialData['detail'],
+    );
+    _priceController = TextEditingController(text: widget.initialData['price']);
     _setAddCategory = TextEditingController();
-    _detailController = TextEditingController();
-    _priceController = TextEditingController();
-    _initializeData();
-  }
 
-  // 데이터 초기화 및 로딩 함수
-  Future<void> _initializeData() async {
-    await _loadCategoryData();
-    if (categories.isNotEmpty && _selectedCategory == null) {
-      setState(() {
-        _selectedCategory = categories.first;
-      });
-    }
+    _loadCategoryData();
   }
 
   @override
@@ -56,132 +57,99 @@ class _PostState extends State<Post> {
     super.dispose();
   }
 
-  // SharedPreferences에서 카테고리 로드
+  // 카테고리 로드 및 추가/삭제 로직
   Future<void> _loadCategoryData() async {
     final prefs = await SharedPreferences.getInstance();
     final loadedCategories = prefs.getStringList('categories') ?? [];
-
     if (mounted) {
       setState(() {
         categories = loadedCategories;
-        if (categories.isNotEmpty && _selectedCategory == null) {
-          _selectedCategory = categories.first;
-        }
       });
     }
   }
 
-  // 새 카테고리 추가
   Future<void> _addCategory(StateSetter innerSetState) async {
     final newCategory = _setAddCategory.text.trim();
-
     if (newCategory.isEmpty) return;
-
     final prefs = await SharedPreferences.getInstance();
-
     if (categories.contains(newCategory)) {
       _setAddCategory.clear();
-      if (mounted) {
-        Navigator.of(context).pop();
-      }
+      Navigator.of(context).pop();
       return;
     }
-
-    // innerSetState 내에서 categories 리스트 업데이트 및 SharedPreferences 저장
     innerSetState(() {
       categories.add(newCategory);
-      _selectedCategory = newCategory; // 새로 추가된 카테고리를 선택
+      _selectedCategory = newCategory;
     });
-
-    // 메인 Post 위젯의 상태도 업데이트 (선택된 카테고리 표시를 위해)
     setState(() {
       _selectedCategory = newCategory;
     });
-
     await prefs.setStringList('categories', categories);
-
     _setAddCategory.clear();
-
-    if (mounted) {
-      Navigator.of(context).pop();
-    }
+    Navigator.of(context).pop();
   }
 
-  // 카테고리를 삭제하고 SharedPreferences를 업데이트하는 함수
   Future<void> _deleteCategory(
     String category,
     StateSetter innerSetState,
   ) async {
     final prefs = await SharedPreferences.getInstance();
-
-    // 1. 카테고리 목록에서 삭제
     categories.remove(category);
-
-    // 2. SharedPreferences 업데이트
     await prefs.setStringList('categories', categories);
-
-    // 3. UI 상태 업데이트
     if (_selectedCategory == category) {
       setState(() {
         _selectedCategory = categories.isNotEmpty ? categories.first : null;
       });
     }
-
-    // 4. BottomSheet 내부 UI 갱신 (StatefulBuilder의 innerSetState 사용)
-    innerSetState(() {
-      // 리스트 갱신만 요청
-    });
+    innerSetState(() {});
   }
 
-  // 모든 데이터 삭제 (개발용)
-  Future<void> _deleteAllData() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.clear();
-    setState(() {
-      categories = [];
-      _selectedCategory = null;
-      _selectedDate = DateTime.now();
-      _detailController.clear();
-      _priceController.clear();
-    });
-    print('All SharedPreferences data cleared.');
-  }
-
-  // 지출 데이터를 SharedPreferences에 저장
-  Future<void> _saveExpenseData() async {
+  // --- 수정 기능 ---
+  Future<void> _updateExpenseData() async {
     final detail = _detailController.text.trim();
     final price = _priceController.text.trim();
 
-    if (_selectedCategory == null || detail.isEmpty || price.isEmpty) {
-      print('Error: All fields (Category, Detail, Price) must be filled.');
-      return;
-    }
+    if (_selectedCategory == null || detail.isEmpty || price.isEmpty) return;
 
-    final expense = {
+    final updatedExpense = {
       'date': _storageDate,
       'category': _selectedCategory,
       'detail': detail,
       'price': price,
     };
 
-    final expenseJsonString = json.encode(expense);
     final storageKey =
         DateFormat('MMMM_yyyy').format(_selectedDate).toLowerCase() + '_data';
     final prefs = await SharedPreferences.getInstance();
     final List<String> currentData = prefs.getStringList(storageKey) ?? [];
 
-    currentData.add(expenseJsonString);
+    if (widget.itemIndex < currentData.length) {
+      currentData[widget.itemIndex] = json.encode(updatedExpense);
+      await prefs.setStringList(storageKey, currentData);
+    }
 
-    await prefs.setStringList(storageKey, currentData);
-
-    setState(() {
-      _detailController.clear();
-      _priceController.clear();
+    if (mounted) {
       Navigator.of(context).pop(true);
-    });
+    }
   }
 
-  // Cupertino 날짜 선택기 표시
+  // --- 삭제 기능 추가 ---
+  Future<void> _deleteExpenseData() async {
+    final storageKey =
+        DateFormat('MMMM_yyyy').format(_selectedDate).toLowerCase() + '_data';
+    final prefs = await SharedPreferences.getInstance();
+    final List<String> currentData = prefs.getStringList(storageKey) ?? [];
+
+    if (widget.itemIndex < currentData.length) {
+      currentData.removeAt(widget.itemIndex); // 해당 인덱스 삭제
+      await prefs.setStringList(storageKey, currentData);
+    }
+
+    if (mounted) {
+      Navigator.of(context).pop(true); // 삭제 성공 알림 후 뒤로가기
+    }
+  }
+
   void _showDatePicker(BuildContext context) {
     showCupertinoModalPopup(
       context: context,
@@ -192,12 +160,8 @@ class _PostState extends State<Post> {
           child: CupertinoDatePicker(
             mode: CupertinoDatePickerMode.date,
             initialDateTime: _selectedDate,
-            minimumDate: DateTime(2025),
-            maximumDate: DateTime(2100),
             onDateTimeChanged: (DateTime newDate) {
-              setState(() {
-                _selectedDate = newDate;
-              });
+              setState(() => _selectedDate = newDate);
             },
           ),
         );
@@ -205,7 +169,6 @@ class _PostState extends State<Post> {
     );
   }
 
-  // 카테고리 BottomSheet 표시
   void showCategoryBottomSheet() {
     _loadCategoryData();
 
@@ -233,7 +196,6 @@ class _PostState extends State<Post> {
                       borderRadius: BorderRadius.circular(50),
                     ),
                   ),
-                  // 카테고리 목록
                   Expanded(
                     child: Padding(
                       padding: const EdgeInsets.all(16),
@@ -261,18 +223,14 @@ class _PostState extends State<Post> {
                           return ElevatedButton(
                             onPressed: () {
                               if (isAddButton) {
-                                // 'ADD' 버튼 클릭 시 Dialog 표시
                                 showDialog(
                                   context: context,
                                   builder: (BuildContext dialogContext) {
                                     WidgetsBinding.instance
-                                        .addPostFrameCallback((
-                                          _,
-                                        ) {
+                                        .addPostFrameCallback((_) {
                                           _focusNode.requestFocus();
                                         });
                                     return Dialog(
-                                      // 기존 디자인 유지
                                       shadowColor: Colors.black,
                                       elevation: 4,
                                       backgroundColor: Colors.white,
@@ -286,7 +244,7 @@ class _PostState extends State<Post> {
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
                                             const Text(
-                                              "ADD CATEGROY",
+                                              "ADD CATEGORY",
                                               style: TextStyle(
                                                 fontWeight: FontWeight.w600,
                                                 fontSize: 16,
@@ -340,11 +298,7 @@ class _PostState extends State<Post> {
                                                           ),
                                                       foregroundColor:
                                                           Colors.black,
-                                                      overlayColor:
-                                                          Colors.black12,
                                                       elevation: 0,
-                                                      shadowColor:
-                                                          Colors.transparent,
                                                       shape: RoundedRectangleBorder(
                                                         borderRadius:
                                                             BorderRadius.circular(
@@ -352,12 +306,7 @@ class _PostState extends State<Post> {
                                                             ),
                                                       ),
                                                     ),
-                                                    child: const Text(
-                                                      'Cancel',
-                                                      style: TextStyle(
-                                                        color: Colors.black,
-                                                      ),
-                                                    ),
+                                                    child: const Text('Cancel'),
                                                   ),
                                                 ),
                                                 const SizedBox(width: 8),
@@ -376,11 +325,7 @@ class _PostState extends State<Post> {
                                                           Colors.black,
                                                       foregroundColor:
                                                           Colors.white,
-                                                      overlayColor:
-                                                          Colors.white12,
                                                       elevation: 0,
-                                                      shadowColor:
-                                                          Colors.transparent,
                                                       shape: RoundedRectangleBorder(
                                                         borderRadius:
                                                             BorderRadius.circular(
@@ -388,12 +333,7 @@ class _PostState extends State<Post> {
                                                             ),
                                                       ),
                                                     ),
-                                                    child: const Text(
-                                                      'OK',
-                                                      style: TextStyle(
-                                                        color: Colors.white,
-                                                      ),
-                                                    ),
+                                                    child: const Text('OK'),
                                                   ),
                                                 ),
                                               ],
@@ -405,7 +345,6 @@ class _PostState extends State<Post> {
                                   },
                                 );
                               } else {
-                                // 카테고리 버튼 클릭 시
                                 if (isCategoryDeleteActivated) return;
                                 setState(() {
                                   _selectedCategory = categoryText;
@@ -415,7 +354,6 @@ class _PostState extends State<Post> {
                             },
                             style: ElevatedButton.styleFrom(
                               elevation: 0,
-                              shadowColor: Colors.transparent,
                               backgroundColor: isSelected
                                   ? Colors.black
                                   : const Color(0xFFF1F1F1),
@@ -425,46 +363,38 @@ class _PostState extends State<Post> {
                               ),
                             ),
                             child: isAddButton
-                                ? const Icon(
-                                    Icons.add,
-                                    color: Colors.black,
-                                  )
+                                ? const Icon(Icons.add, color: Colors.black)
                                 : Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      // 텍스트 영역 (X 버튼이 있을 경우 공간을 양보)
                                       Expanded(
                                         flex: isCategoryDeleteActivated ? 4 : 5,
                                         child: Text(
-                                          textAlign: TextAlign.center,
                                           categoryText!,
+                                          textAlign: TextAlign.center,
                                           overflow: TextOverflow.ellipsis,
                                           style: TextStyle(
                                             color: isSelected
                                                 ? Colors.white
                                                 : Colors.black,
-                                            fontWeight: FontWeight.normal,
                                           ),
                                         ),
                                       ),
-
-                                      // 삭제 아이콘 버튼
                                       if (isCategoryDeleteActivated)
                                         Expanded(
                                           flex: 2,
                                           child: IconButton(
                                             onPressed: () => _deleteCategory(
-                                              categoryText!,
+                                              categoryText,
                                               innerSetState,
                                             ),
                                             icon: const Icon(Icons.close),
-                                            padding: EdgeInsets.all(8),
+                                            padding: const EdgeInsets.all(8),
                                             constraints: const BoxConstraints(
                                               minWidth: 16,
                                               minHeight: 16,
                                             ),
                                             iconSize: 16,
-                                            highlightColor: Colors.grey,
                                             color: isSelected
                                                 ? Colors.white
                                                 : Colors.black,
@@ -516,10 +446,8 @@ class _PostState extends State<Post> {
       appBar: AppBar(
         backgroundColor: const Color(0xFFF5F5F7),
         title: const Text(
-          "New Expense",
-          style: TextStyle(
-            fontWeight: FontWeight.w500,
-          ),
+          "Update Expense",
+          style: TextStyle(fontWeight: FontWeight.w500),
         ),
       ),
       body: Padding(
@@ -527,28 +455,20 @@ class _PostState extends State<Post> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // --- Date Section ---
             const Padding(
               padding: EdgeInsets.only(left: 8),
               child: Text(
                 "Date",
-                style: TextStyle(
-                  color: Colors.black,
-                  fontSize: 16,
-                ),
+                style: TextStyle(color: Colors.black, fontSize: 16),
               ),
             ),
             const SizedBox(height: 4),
             ElevatedButton(
-              onPressed: () {
-                _showDatePicker(context);
-              },
+              onPressed: () => _showDatePicker(context),
               style: ElevatedButton.styleFrom(
                 elevation: 0,
                 alignment: Alignment.centerLeft,
                 backgroundColor: Colors.white,
-                overlayColor: Colors.black12,
-                shadowColor: Colors.transparent,
                 fixedSize: Size(MediaQuery.of(context).size.width, 48),
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 shape: RoundedRectangleBorder(
@@ -560,29 +480,18 @@ class _PostState extends State<Post> {
                 children: [
                   Text(
                     formatedDate,
-                    style: const TextStyle(
-                      color: Colors.black,
-                      fontSize: 16,
-                      fontWeight: FontWeight.normal,
-                    ),
+                    style: const TextStyle(color: Colors.black, fontSize: 16),
                   ),
-                  const Icon(
-                    Icons.date_range_rounded,
-                    color: Colors.grey,
-                  ),
+                  const Icon(Icons.date_range_rounded, color: Colors.grey),
                 ],
               ),
             ),
-            // --- Category Section ---
             const SizedBox(height: 8),
             const Padding(
               padding: EdgeInsets.only(left: 8),
               child: Text(
                 "Category",
-                style: TextStyle(
-                  color: Colors.black,
-                  fontSize: 16,
-                ),
+                style: TextStyle(color: Colors.black, fontSize: 16),
               ),
             ),
             const SizedBox(height: 4),
@@ -592,8 +501,6 @@ class _PostState extends State<Post> {
                 elevation: 0,
                 alignment: Alignment.centerLeft,
                 backgroundColor: Colors.white,
-                overlayColor: Colors.black12,
-                shadowColor: Colors.transparent,
                 fixedSize: Size(MediaQuery.of(context).size.width, 48),
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 shape: RoundedRectangleBorder(
@@ -602,23 +509,15 @@ class _PostState extends State<Post> {
               ),
               child: Text(
                 _selectedCategory ?? 'Select Category',
-                style: const TextStyle(
-                  color: Colors.black,
-                  fontSize: 16,
-                  fontWeight: FontWeight.normal,
-                ),
+                style: const TextStyle(color: Colors.black, fontSize: 16),
               ),
             ),
-            // --- Detail Section ---
             const SizedBox(height: 8),
             const Padding(
               padding: EdgeInsets.only(left: 8),
               child: Text(
                 "Detail",
-                style: TextStyle(
-                  color: Colors.black,
-                  fontSize: 16,
-                ),
+                style: TextStyle(color: Colors.black, fontSize: 16),
               ),
             ),
             const SizedBox(height: 4),
@@ -640,17 +539,10 @@ class _PostState extends State<Post> {
                 ),
               ),
             ),
-            // --- Price Section ---
             const SizedBox(height: 8),
             const Padding(
               padding: EdgeInsets.only(left: 8),
-              child: Text(
-                "Price",
-                style: TextStyle(
-                  color: Colors.black,
-                  fontSize: 16,
-                ),
-              ),
+              child: Text("Price", style: TextStyle(fontSize: 16)),
             ),
             const SizedBox(height: 4),
             TextField(
@@ -672,46 +564,51 @@ class _PostState extends State<Post> {
                 ),
               ),
             ),
-            // --- Post Button ---
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _saveExpenseData,
-              style: ElevatedButton.styleFrom(
-                elevation: 0,
-                shadowColor: Colors.transparent,
-                backgroundColor: Colors.black,
-                fixedSize: Size(MediaQuery.of(context).size.width, 48),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+            const SizedBox(height: 24),
+            // --- 버튼 섹션: 삭제와 수정을 가로로 배치 ---
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: _deleteExpenseData, // 삭제 로직 호출
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.redAccent,
+                      minimumSize: const Size.fromHeight(48),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    child: const Text(
+                      "DELETE",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
                 ),
-                overlayColor: Colors.white12,
-              ),
-              child: const Text(
-                "POST",
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
+                const SizedBox(width: 12),
+                Expanded(
+                  flex: 2, // UPDATE 버튼을 조금 더 넓게 설정
+                  child: ElevatedButton(
+                    onPressed: _updateExpenseData,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.black,
+                      minimumSize: const Size.fromHeight(48),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    child: const Text(
+                      "UPDATE",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
                 ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            // --- Delete All Data Button (개발용) ---
-            ElevatedButton(
-              onPressed: _deleteAllData,
-              style: ElevatedButton.styleFrom(
-                elevation: 0,
-                shadowColor: Colors.transparent,
-                backgroundColor: Colors.blue,
-                fixedSize: Size(MediaQuery.of(context).size.width, 48),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                overlayColor: Colors.white12,
-              ),
-              child: const Text(
-                "DELETE All DATA",
-                style: TextStyle(color: Colors.white),
-              ),
+              ],
             ),
           ],
         ),

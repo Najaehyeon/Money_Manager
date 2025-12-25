@@ -1,8 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:money_manager/Home/post.dart';
-import 'package:money_manager/detail.dart';
+import 'package:money_manager/post.dart';
+import 'package:money_manager/Detail/detail.dart';
 import 'package:money_manager/Home/home.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
