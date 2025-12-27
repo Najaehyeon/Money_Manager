@@ -5,13 +5,15 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
 class UpdatePage extends StatefulWidget {
-  final int itemIndex;
   final Map<String, dynamic> initialData;
+  final String dateKey;
+  final Map<String, dynamic> oldData;
 
   const UpdatePage({
     super.key,
-    required this.itemIndex,
     required this.initialData,
+    required this.dateKey,
+    required this.oldData,
   });
 
   @override
@@ -21,6 +23,7 @@ class UpdatePage extends StatefulWidget {
 class _UpdatePageState extends State<UpdatePage> {
   // 상태 변수들
   late DateTime _selectedDate;
+  late DateTime _initialDate;
   String get formatedDate => DateFormat('MMMM d, yyyy').format(_selectedDate);
   String get _storageDate => DateFormat('yyyy-MM-dd').format(_selectedDate);
 
@@ -37,7 +40,9 @@ class _UpdatePageState extends State<UpdatePage> {
   void initState() {
     super.initState();
     // 초기값 세팅
-    _selectedDate = DateTime.parse(widget.initialData['date']);
+    _initialDate = DateTime.parse(widget.initialData['date']);
+    _selectedDate = _initialDate;
+
     _selectedCategory = widget.initialData['category'];
     _detailController = TextEditingController(
       text: widget.initialData['detail'],
@@ -104,49 +109,70 @@ class _UpdatePageState extends State<UpdatePage> {
     innerSetState(() {});
   }
 
-  // --- 수정 기능 ---
   Future<void> _updateExpenseData() async {
-    final detail = _detailController.text.trim();
-    final price = _priceController.text.trim();
+    final prefs = await SharedPreferences.getInstance();
 
-    if (_selectedCategory == null || detail.isEmpty || price.isEmpty) return;
+    // 1. 기존 데이터가 들어있는 '서랍' 열기 (수정 전 날짜 기준)
+    String oldStorageKey = widget.dateKey;
+    List<String> oldList = prefs.getStringList(oldStorageKey) ?? [];
 
-    final updatedExpense = {
-      'date': _storageDate,
+    // 2. 원본(oldData)과 똑같은 항목을 찾아서 제거
+    // 인덱스 대신 내용(JSON 문자열)을 직접 비교합니다.
+    String oldJson = json.encode(widget.oldData);
+    oldList.remove(oldJson);
+    await prefs.setStringList(oldStorageKey, oldList);
+
+    // 3. 새 데이터 준비 (날짜가 바뀌었을 수도 있음)
+    String newStorageKey =
+        DateFormat('MMMM_yyyy').format(_selectedDate).toLowerCase() + '_data';
+    Map<String, dynamic> newData = {
+      'date': DateFormat('yyyy-MM-dd').format(_selectedDate),
       'category': _selectedCategory,
-      'detail': detail,
-      'price': price,
+      'detail': _detailController.text,
+      'price': _priceController.text,
     };
 
-    final storageKey =
-        DateFormat('MMMM_yyyy').format(_selectedDate).toLowerCase() + '_data';
-    final prefs = await SharedPreferences.getInstance();
-    final List<String> currentData = prefs.getStringList(storageKey) ?? [];
+    // 4. 새 '서랍'에 저장
+    List<String> newList = (newStorageKey == oldStorageKey)
+        ? oldList
+        : (prefs.getStringList(newStorageKey) ?? []);
 
-    if (widget.itemIndex < currentData.length) {
-      currentData[widget.itemIndex] = json.encode(updatedExpense);
-      await prefs.setStringList(storageKey, currentData);
-    }
+    newList.add(json.encode(newData));
+    await prefs.setStringList(newStorageKey, newList);
 
-    if (mounted) {
-      Navigator.of(context).pop(true);
-    }
+    if (mounted) Navigator.of(context).pop(true);
   }
 
-  // --- 삭제 기능 추가 ---
+  // --- 삭제 로직 ---
   Future<void> _deleteExpenseData() async {
-    final storageKey =
-        DateFormat('MMMM_yyyy').format(_selectedDate).toLowerCase() + '_data';
-    final prefs = await SharedPreferences.getInstance();
-    final List<String> currentData = prefs.getStringList(storageKey) ?? [];
+    try {
+      final prefs = await SharedPreferences.getInstance();
 
-    if (widget.itemIndex < currentData.length) {
-      currentData.removeAt(widget.itemIndex); // 해당 인덱스 삭제
-      await prefs.setStringList(storageKey, currentData);
-    }
+      // 1. 현재 저장된 리스트 가져오기
+      List<String> currentData = prefs.getStringList(widget.dateKey) ?? [];
 
-    if (mounted) {
-      Navigator.of(context).pop(true); // 삭제 성공 알림 후 뒤로가기
+      // 2. 원본 데이터(oldData)를 JSON 문자열로 변환하여 찾기
+      String targetJson = json.encode(widget.oldData);
+
+      print("삭제 시도: $targetJson");
+
+      // 3. 리스트에서 해당 내용과 완벽히 일치하는 항목 제거
+      if (currentData.contains(targetJson)) {
+        currentData.remove(targetJson);
+
+        // 4. 저장 후 화면 닫기
+        await prefs.setStringList(widget.dateKey, currentData);
+        print("삭제 성공");
+
+        if (mounted) {
+          Navigator.of(context).pop(true);
+        }
+      } else {
+        print("삭제 실패: 동일한 데이터를 찾을 수 없음");
+        // 만약 못 찾았다면, 날짜 형식이 미세하게 다를 수 있으니 알림 처리
+      }
+    } catch (e) {
+      print("삭제 에러: $e");
     }
   }
 
@@ -469,6 +495,8 @@ class _UpdatePageState extends State<UpdatePage> {
                 elevation: 0,
                 alignment: Alignment.centerLeft,
                 backgroundColor: Colors.white,
+                overlayColor: Colors.black12,
+                shadowColor: Colors.transparent,
                 fixedSize: Size(MediaQuery.of(context).size.width, 48),
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 shape: RoundedRectangleBorder(
@@ -480,7 +508,11 @@ class _UpdatePageState extends State<UpdatePage> {
                 children: [
                   Text(
                     formatedDate,
-                    style: const TextStyle(color: Colors.black, fontSize: 16),
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontSize: 16,
+                      fontWeight: FontWeight.normal,
+                    ),
                   ),
                   const Icon(Icons.date_range_rounded, color: Colors.grey),
                 ],
@@ -501,6 +533,8 @@ class _UpdatePageState extends State<UpdatePage> {
                 elevation: 0,
                 alignment: Alignment.centerLeft,
                 backgroundColor: Colors.white,
+                overlayColor: Colors.black12,
+                shadowColor: Colors.transparent,
                 fixedSize: Size(MediaQuery.of(context).size.width, 48),
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 shape: RoundedRectangleBorder(
@@ -509,7 +543,11 @@ class _UpdatePageState extends State<UpdatePage> {
               ),
               child: Text(
                 _selectedCategory ?? 'Select Category',
-                style: const TextStyle(color: Colors.black, fontSize: 16),
+                style: TextStyle(
+                  color: Colors.black,
+                  fontSize: 16,
+                  fontWeight: FontWeight.normal,
+                ),
               ),
             ),
             const SizedBox(height: 8),

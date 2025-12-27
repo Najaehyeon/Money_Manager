@@ -696,23 +696,23 @@ class _PostState extends State<Post> {
             ),
             const SizedBox(height: 12),
             // --- Delete All Data Button (개발용) ---
-            // ElevatedButton(
-            //   onPressed: _deleteAllData,
-            //   style: ElevatedButton.styleFrom(
-            //     elevation: 0,
-            //     shadowColor: Colors.transparent,
-            //     backgroundColor: Colors.blue,
-            //     fixedSize: Size(MediaQuery.of(context).size.width, 48),
-            //     shape: RoundedRectangleBorder(
-            //       borderRadius: BorderRadius.circular(16),
-            //     ),
-            //     overlayColor: Colors.white12,
-            //   ),
-            //   child: const Text(
-            //     "DELETE All DATA",
-            //     style: TextStyle(color: Colors.white),
-            //   ),
-            // ),
+            ElevatedButton(
+              onPressed: _deleteAllData,
+              style: ElevatedButton.styleFrom(
+                elevation: 0,
+                shadowColor: Colors.transparent,
+                backgroundColor: Colors.blue,
+                fixedSize: Size(MediaQuery.of(context).size.width, 48),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                overlayColor: Colors.white12,
+              ),
+              child: const Text(
+                "DELETE All DATA",
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
           ],
         ),
       ),

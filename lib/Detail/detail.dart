@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:intl/intl.dart';
 import 'package:money_manager/Detail/update.dart';
+import 'package:money_manager/main.dart';
 import 'package:money_manager/widget/MyBannerAdWidget.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:table_calendar/table_calendar.dart';
@@ -14,7 +15,7 @@ class Detail extends StatefulWidget {
   State<Detail> createState() => _DetailState();
 }
 
-class _DetailState extends State<Detail> {
+class _DetailState extends State<Detail> with RouteAware {
   Map<String, List<Map<String, dynamic>>> groupedData = {};
   List<String> sortedDates = [];
   DateTime _viewDate = DateTime(2025, 12);
@@ -30,6 +31,27 @@ class _DetailState extends State<Detail> {
     super.initState();
     _loadSettings();
     _loadData();
+  }
+
+  // 1. RouteAware를 사용하기 위해 routeObserver에 현재 Route를 등록합니다.
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    routeObserver.subscribe(this, ModalRoute.of(context) as PageRoute);
+  }
+
+  // 2. 현재 화면이 스택으로 돌아왔을 때 호출되는 메서드
+  @override
+  void didPopNext() {
+    _loadSettings();
+    _loadData();
+  }
+
+  // 6. 위젯이 제거될 때 구독을 해제합니다.
+  @override
+  void dispose() {
+    routeObserver.unsubscribe(this);
+    super.dispose();
   }
 
   // 뷰 모드 설정 불러오기
@@ -67,8 +89,12 @@ class _DetailState extends State<Detail> {
       tempGrouped[date]!.add(expense);
     }
 
+    // 날짜 역순 정렬 (최신순)
     List<String> sortedKeys = tempGrouped.keys.toList()
       ..sort((a, b) => b.compareTo(a));
+
+    // 중요: 각 날짜 내부의 리스트도 일관성을 위해 정렬이 필요하다면 여기서 수행할 수 있습니다.
+    // 현재는 입력 순서를 유지합니다.
 
     setState(() {
       groupedData = tempGrouped;
@@ -82,7 +108,7 @@ class _DetailState extends State<Detail> {
   }
 
   // 금액 포맷팅을 위한 통합 함수
-  String _formatCurrency(int amount) {
+  String _formatCurrency(double amount) {
     final locale = Localizations.localeOf(context).toString();
     const noDecimalLocales = ['ko_KR', 'ja_JP', 'ko', 'ja'];
     int digits = noDecimalLocales.contains(locale) ? 0 : 1;
@@ -94,9 +120,9 @@ class _DetailState extends State<Detail> {
   }
 
   String _getDayTotal(List<Map<String, dynamic>> expenses) {
-    int total = 0;
+    double total = 0;
     for (var e in expenses) {
-      total += int.tryParse(e['price'].replaceAll(',', '')) ?? 0;
+      total += double.tryParse(e['price'].replaceAll(',', '')) ?? 0;
     }
     return _formatCurrency(total);
   }
@@ -165,18 +191,18 @@ class _DetailState extends State<Detail> {
             ),
           ),
           // 광고 영역
-          Padding(
-            padding: const EdgeInsets.only(left: 12, right: 12, bottom: 12),
-            child: Container(
-              width: MediaQuery.of(context).size.width,
-              height: 72,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: MyBannerAdWidget(adSize: AdSize.banner),
-            ),
-          ),
+          // Padding(
+          //   padding: const EdgeInsets.only(left: 12, right: 12, bottom: 12),
+          //   child: Container(
+          //     width: MediaQuery.of(context).size.width,
+          //     height: 72,
+          //     decoration: BoxDecoration(
+          //       color: Colors.white,
+          //       borderRadius: BorderRadius.circular(12),
+          //     ),
+          //     child: MyBannerAdWidget(adSize: AdSize.banner),
+          //   ),
+          // ),
           // 메인 콘텐츠 영역 (리스트 또는 달력)
           Expanded(
             child: Padding(
@@ -255,14 +281,14 @@ class _DetailState extends State<Detail> {
           itemBuilder: (context, subIdx) {
             var item = dayExpenses[subIdx];
             final price = _formatCurrency(
-              int.parse(item['price'].replaceAll(',', '')),
+              double.parse(item['price'].replaceAll(',', '')),
             );
             return Padding(
               padding: const EdgeInsets.only(bottom: 4),
               child: Row(
                 children: [
                   Expanded(
-                    flex: 3,
+                    flex: 4,
                     child: Text(
                       item['category'] ?? "",
                       style: const TextStyle(color: Colors.grey),
@@ -273,19 +299,31 @@ class _DetailState extends State<Detail> {
                     child: SizedBox(),
                   ),
                   Expanded(
-                    flex: 5,
+                    flex: 6,
                     child: GestureDetector(
                       onTap: () async {
-                        bool? updated = await Navigator.push(
+                        final storageKey =
+                            DateFormat(
+                              'MMMM_yyyy',
+                            ).format(DateTime.parse(dateKey)).toLowerCase() +
+                            '_data';
+
+                        final result = await Navigator.push(
                           context,
                           MaterialPageRoute(
                             builder: (context) => UpdatePage(
-                              itemIndex: subIdx,
-                              initialData: item,
+                              // itemIndex: subIdx,  <-- 인덱스는 이제 사용하지 않습니다.
+                              initialData: Map<String, dynamic>.from(
+                                item,
+                              ), // 수정될 데이터
+                              oldData: Map<String, dynamic>.from(
+                                item,
+                              ), // 비교용 원본 데이터
+                              dateKey: storageKey,
                             ),
                           ),
                         );
-                        if (updated == true) _loadData();
+                        if (result == true) await _loadData();
                       },
                       child: Text(item['detail'] ?? ""),
                     ),

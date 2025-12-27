@@ -36,8 +36,6 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> with RouteAware {
-  String state = '초기 상태';
-  // 상태 변수 (이전과 동일)
   double _targetMoney = 0;
   DateTime _selectedDate = DateTime.now();
   double _currentSpentMoney = 0;
@@ -918,16 +916,13 @@ class WeekStats extends StatelessWidget {
                       } else {
                         barHeight =
                             (daySpent / _dailyLimit) * limitLineHeight >
-                                limitLineHeight
+                                limitLineHeight * 1.8
                             ? limitLineHeight * 1.8
                             : (daySpent / _dailyLimit) * limitLineHeight;
                       }
 
                       DateTime now = DateTime.now();
-                      bool isToday =
-                          (now.weekday % 7 == index) &&
-                          _selectedWeekDateMin.isBefore(now) &&
-                          _selectedWeekDateMax.isAfter(now);
+                      bool isToday = now.weekday % 7 == index;
 
                       // 3. 막대 상단 일일 지출액 포맷팅 (심플하게 표시하기 위해 simpleCurrency 대신 숫자로만 표시하거나 원화/달러 구분)
                       // 여기서는 통화 기호를 제외하고 숫자만 포맷팅하거나, 전체 포맷팅을 적용할 수 있습니다.
