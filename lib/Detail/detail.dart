@@ -191,18 +191,18 @@ class _DetailState extends State<Detail> with RouteAware {
             ),
           ),
           // 광고 영역
-          // Padding(
-          //   padding: const EdgeInsets.only(left: 12, right: 12, bottom: 12),
-          //   child: Container(
-          //     width: MediaQuery.of(context).size.width,
-          //     height: 72,
-          //     decoration: BoxDecoration(
-          //       color: Colors.white,
-          //       borderRadius: BorderRadius.circular(12),
-          //     ),
-          //     child: MyBannerAdWidget(adSize: AdSize.banner),
-          //   ),
-          // ),
+          Padding(
+            padding: const EdgeInsets.only(left: 12, right: 12, bottom: 12),
+            child: Container(
+              width: MediaQuery.of(context).size.width,
+              height: 72,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: MyBannerAdWidget(adSize: AdSize.banner),
+            ),
+          ),
           // 메인 콘텐츠 영역 (리스트 또는 달력)
           Expanded(
             child: Padding(
