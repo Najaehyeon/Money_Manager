@@ -63,24 +63,10 @@ class _HomeState extends State<Home> with RouteAware {
     _loadThisWeekData();
   }
 
-  // 1. RouteAware를 사용하기 위해 routeObserver에 현재 Route를 등록합니다.
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    routeObserver.subscribe(this, ModalRoute.of(context) as PageRoute);
-  }
-
   // 2. 현재 화면이 스택으로 돌아왔을 때 호출되는 메서드
   @override
   void didPopNext() {
     _loadAllData();
-  }
-
-  // 6. 위젯이 제거될 때 구독을 해제합니다.
-  @override
-  void dispose() {
-    routeObserver.unsubscribe(this);
-    super.dispose();
   }
 
   Future<void> _loadSettings() async {

@@ -5,7 +5,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
 class Post extends StatefulWidget {
-  const Post({super.key});
+  const Post({
+    super.key,
+  });
 
   @override
   State<Post> createState() => _PostState();
@@ -177,7 +179,7 @@ class _PostState extends State<Post> {
     setState(() {
       _detailController.clear();
       _priceController.clear();
-      Navigator.of(context).pop(true);
+      Navigator.of(context).pop();
     });
   }
 
