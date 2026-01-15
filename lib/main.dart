@@ -1,30 +1,42 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
+import 'package:money_manager/constants/app_strings.dart';
+import 'package:money_manager/constants/app_styles.dart';
 import 'package:money_manager/post.dart';
 import 'package:money_manager/Detail/detail.dart';
 import 'package:money_manager/Home/home.dart';
+import 'package:money_manager/constants/app_colors.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  unawaited(MobileAds.instance.initialize());
-  runApp(const MoneyManager());
+  
+  // MobileAds 초기화를 await로 변경하고 에러 핸들링 추가
+  try {
+    await MobileAds.instance.initialize();
+  } catch (e) {
+    // MobileAds 초기화 실패 시에도 앱이 실행되도록 함
+    debugPrint('MobileAds initialization failed: $e');
+  }
+  
+  await initializeDateFormatting();
+
+  runApp(MyApp());
 }
 
-class MoneyManager extends StatelessWidget {
-  const MoneyManager({super.key});
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: "Money Manager",
+      title: AppStrings.appTitle,
       theme: ThemeData(
-        scaffoldBackgroundColor: Colors.white,
+        scaffoldBackgroundColor: AppColors.surface,
         splashColor: Colors.transparent,
       ),
-      home: const MainPage(),
+      home: MainPage(),
     );
   }
 }
@@ -62,21 +74,21 @@ class _MainPageState extends State<MainPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomInset: false,
-      backgroundColor: Color(0xFFF5F5F7),
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: _widgetOptions.elementAt(_selectedIndex),
       ),
       bottomNavigationBar: BottomNavigationBar(
         items: <BottomNavigationBarItem>[
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: AppStrings.home),
           BottomNavigationBarItem(
             icon: Icon(Icons.format_align_left_rounded),
-            label: 'Detail',
+            label: AppStrings.detail,
           ),
         ],
         currentIndex: _selectedIndex,
-        selectedItemColor: Colors.black,
-        backgroundColor: Colors.white,
+        selectedItemColor: AppColors.textPrimary,
+        backgroundColor: AppColors.surface,
         elevation: 0,
         enableFeedback: true,
         onTap: _onItemTapped,
@@ -101,14 +113,14 @@ class _MainPageState extends State<MainPage> {
         },
         splashColor: Colors.grey[800],
         elevation: 1,
-        backgroundColor: Colors.black,
+        backgroundColor: AppColors.accent,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(100),
+          borderRadius: BorderRadius.circular(AppStyles.borderRadiusCylinder),
         ),
         child: Icon(
           Icons.add,
           size: 28,
-          color: Colors.white,
+          color: AppColors.textOnPrimary,
         ),
       ),
     );

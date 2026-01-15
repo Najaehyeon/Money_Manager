@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
-import 'package:money_manager/main.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert'; // JSON 데이터 처리를 위한 import
 
