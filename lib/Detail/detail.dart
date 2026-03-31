@@ -1,9 +1,9 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
+// import 'package:google_mobile_ads/google_mobile_ads.dart';
+// import 'package:money_manager/widget/MyBannerAdWidget.dart';
 import 'package:intl/intl.dart';
 import 'package:money_manager/Detail/update.dart';
-import 'package:money_manager/widget/MyBannerAdWidget.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:table_calendar/table_calendar.dart';
 
@@ -176,18 +176,18 @@ class _DetailState extends State<Detail> with RouteAware {
             ),
           ),
           // 광고 영역
-          Padding(
-            padding: const EdgeInsets.only(left: 12, right: 12, bottom: 12),
-            child: Container(
-              width: MediaQuery.of(context).size.width,
-              height: 72,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: MyBannerAdWidget(adSize: AdSize.banner),
-            ),
-          ),
+          // Padding(
+          //   padding: const EdgeInsets.only(left: 12, right: 12, bottom: 12),
+          //   child: Container(
+          //     width: MediaQuery.of(context).size.width,
+          //     height: 72,
+          //     decoration: BoxDecoration(
+          //       color: Colors.white,
+          //       borderRadius: BorderRadius.circular(12),
+          //     ),
+          //     child: MyBannerAdWidget(adSize: AdSize.banner),
+          //   ),
+          // ),
           // 메인 콘텐츠 영역 (리스트 또는 달력)
           Expanded(
             child: Padding(

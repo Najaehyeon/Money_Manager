@@ -13,10 +13,10 @@ String formatCurrency(BuildContext context, double amount) {
 
   // 소수점이 없는 화폐(KRW, JPY 등) 리스트
   const noDecimalLocales = ['ko_KR', 'ja_JP', 'ko', 'ja'];
-  int digits = noDecimalLocales.contains(locale) ? 0 : 1;
+  int digits = noDecimalLocales.contains(locale) ? 0 : 0;
 
   final formatter = NumberFormat.simpleCurrency(
-    locale: locale,
+    locale: 'ko_KR',
     decimalDigits: digits,
   );
 
@@ -603,11 +603,11 @@ class Cylinder extends StatelessWidget {
     final locale = Localizations.localeOf(context).toString();
     const noDecimalLocales = ['ko_KR', 'ja_JP', 'ko', 'ja'];
     // 별도의 설정이 없으면 KRW/JPY는 0자리, 나머지는 1자리 소수점 표시
-    int digits = decimal ?? (noDecimalLocales.contains(locale) ? 0 : 1);
+    int digits = decimal ?? (noDecimalLocales.contains(locale) ? 0 : 0);
 
     final formatter = NumberFormat.simpleCurrency(
-      locale: locale,
-      decimalDigits: digits,
+      locale: 'ko_KR',
+      decimalDigits: 0,
     );
     return formatter.format(amount);
   }
@@ -793,10 +793,10 @@ class WeekStats extends StatelessWidget {
     final locale = Localizations.localeOf(context).toString();
     const noDecimalLocales = ['ko_KR', 'ja_JP', 'ko', 'ja'];
     // KRW/JPY는 소수점 0자리, 나머지는 1자리 또는 지정된 자리수
-    int digits = decimal ?? (noDecimalLocales.contains(locale) ? 0 : 1);
+    int digits = decimal ?? (noDecimalLocales.contains(locale) ? 0 : 0);
 
     final formatter = NumberFormat.simpleCurrency(
-      locale: locale,
+      locale: 'ko_KR',
       decimalDigits: digits,
     );
     return formatter.format(amount);
@@ -914,7 +914,7 @@ class WeekStats extends StatelessWidget {
                       // 디자인상 숫자만 있는 게 깔끔하므로 숫자 포맷만 유지하거나 포맷팅 함수를 씁니다.
                       final locale = Localizations.localeOf(context).toString();
                       String spentText = NumberFormat.decimalPattern(
-                        locale,
+                        'ko_KR',
                       ).format(daySpent);
 
                       return Expanded(
@@ -1032,7 +1032,7 @@ class TargetMonthlyMax extends StatelessWidget {
     int digits = noDecimalLocales.contains(locale) ? 0 : 0;
 
     final formatter = NumberFormat.simpleCurrency(
-      locale: locale,
+      locale: 'ko_KR',
       decimalDigits: digits,
     );
     return formatter.format(amount);

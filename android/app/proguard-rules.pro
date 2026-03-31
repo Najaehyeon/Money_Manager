@@ -10,6 +10,13 @@
 -keep class com.google.android.gms.ads.** { *; }
 -dontwarn com.google.android.gms.ads.**
 
+# Google Play Core 관련 클래스 유지
+-keep class com.google.android.play.core.** { *; }
+
+# Flutter의 디퍼드 컴포넌트 관련 누락 방지
+-dontwarn io.flutter.embedding.engine.deferredcomponents.**
+-dontwarn com.google.android.play.core.**
+
 # Keep native methods
 -keepclasseswithmembernames class * {
     native <methods>;
@@ -44,3 +51,13 @@
 # Keep line numbers for stack traces
 -keepattributes SourceFile,LineNumberTable
 -renamesourcefileattribute SourceFile
+
+# Keep MainActivity and all Activities
+-keep class * extends android.app.Activity
+-keep class * extends android.app.Application
+-keep class * extends android.app.Service
+-keep class * extends android.content.BroadcastReceiver
+-keep class * extends android.content.ContentProvider
+
+# Keep MainActivity specifically
+-keep class com.crunchcube.money_manager.MainActivity { *; }
